@@ -1,0 +1,9 @@
+/target
+/Cargo.lock
+*__pycache__*
+benchmarks/results
+.vscode
+build
+*.egg*
+misc
+**.so
