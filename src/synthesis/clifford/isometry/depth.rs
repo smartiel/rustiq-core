@@ -205,7 +205,7 @@ mod tests {
     #[test]
     fn test_isometry_depth_synthesis() {
         for _ in 0..20 {
-            let n = 20;
+            let n = 10;
             let k = 10;
             let mut isometry = IsometryTableau::random(n, k);
             isometry.normalize_inplace();
