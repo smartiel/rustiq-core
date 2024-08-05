@@ -1,5 +1,5 @@
 use crate::routines::f2_linalg::*;
-use crate::structures::{CliffordCircuit, CliffordGate, IsometryTableau};
+use crate::structures::{CliffordCircuit, CliffordGate, IsometryTableau, PauliLike, PauliSet};
 
 pub fn extract_abcd(isometry: &IsometryTableau) -> (Matrix, Matrix, Matrix, Matrix) {
     let mut a = vec![vec![false; isometry.n + isometry.k]; isometry.n + isometry.k];
@@ -60,6 +60,49 @@ pub fn decompose(isometry: &IsometryTableau) -> (Matrix, Matrix, Matrix, Cliffor
     let gk = mult_f2(&inv_b, &d).drain(..isometry.n).collect();
     return (gk, gn, b_k, piece);
 }
+
+pub fn fix_phases(isometry: &IsometryTableau, circuit: &mut CliffordCircuit) {
+    if isometry.k > 0 {
+        return;
+    }
+    let mut simulated = IsometryTableau::new(isometry.n, 0);
+    simulated.conjugate_with_circuit(circuit);
+    let mut pvec = vec![false; 2 * isometry.n];
+    for i in 0..isometry.n {
+        if isometry.logicals.get_phase(i) ^ simulated.logicals.get_phase(i) {
+            pvec[i + isometry.n] = true;
+        }
+        if isometry.logicals.get_phase(i + isometry.n)
+            ^ simulated.logicals.get_phase(i + isometry.n)
+        {
+            pvec[i] = true;
+        }
+    }
+    let mut pset = PauliSet::new(isometry.n);
+    pset.insert_vec_bool(&pvec, false);
+    pset.conjugate_with_circuit(circuit);
+    let (_, pstring) = pset.get(0);
+    for (i, c) in pstring.chars().enumerate() {
+        match c {
+            'X' => {
+                circuit.gates.push(CliffordGate::SqrtX(i));
+                circuit.gates.push(CliffordGate::SqrtX(i));
+            }
+            'Z' => {
+                circuit.gates.push(CliffordGate::S(i));
+                circuit.gates.push(CliffordGate::S(i));
+            }
+            'Y' => {
+                circuit.gates.push(CliffordGate::SqrtX(i));
+                circuit.gates.push(CliffordGate::S(i));
+                circuit.gates.push(CliffordGate::S(i));
+                circuit.gates.push(CliffordGate::SqrtXd(i));
+            }
+            _ => {}
+        }
+    }
+}
+
 // Write a test module for this function
 #[cfg(test)]
 mod tests {
