@@ -1,7 +1,7 @@
 [package]
 name = "rustiq-core"
 description = "Quantum circuit synthesis library in rust"
-version = "0.0.3"
+version = "0.0.5"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE.txt"
