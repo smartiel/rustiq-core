@@ -5,6 +5,9 @@ version = "0.0.3"
 edition = "2021"
 license = "MIT"
 license-file = "LICENSE.txt"
+repository = "https://github.com/smartiel/rustiq-core"
+documentation = "https://docs.rs/rustiq-core"
+homepage = "https://github.com/smartiel/rustiq-core"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
