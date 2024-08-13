@@ -207,7 +207,7 @@ impl PauliSet {
         (((self.phases[stride] >> offset) & 1 != 0), output)
     }
 
-    /// Get the operator at index `operator_index` as a pair (phase, Vec<bool>)
+    /// Get the operator at index `operator_index` as a pair `(bool, Vec<bool>)`
     pub fn get_as_vec_bool(&self, operator_index: usize) -> (bool, Vec<bool>) {
         let operator_index = operator_index + self.start_offset;
         let mut output = Vec::new();

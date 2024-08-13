@@ -1,3 +1,5 @@
+//! This module contains all the data structures
+
 pub mod clifford_circuit;
 pub mod graph_state;
 pub mod hardware;
