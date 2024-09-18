@@ -40,6 +40,18 @@ impl PauliSet {
             phases: Vec::new(),
         }
     }
+    /// Allocate a set of m n-qubit Pauli operators set to the identity
+    pub fn new_empty(n: usize, m: usize) -> Self {
+        let nstrides = get_stride(m - 1);
+        Self {
+            n,
+            nstrides,
+            noperators: m,
+            start_offset: 0,
+            data_array: vec![vec![0; nstrides]; 2 * n],
+            phases: vec![0; nstrides],
+        }
+    }
     // Construction from a list of operators
     pub fn from_slice(data: &[String]) -> Self {
         if data.len() == 0 {
