@@ -31,9 +31,29 @@ impl CliffordGate {
             CliffordGate::SqrtXd(i) => ("SqrtXd".to_owned(), vec![*i]),
         }
     }
+    pub fn from_vec(gate: &str, qbits: &Vec<usize>) -> Self {
+        match gate {
+            "H" => Self::H(qbits[0]),
+            "S" => Self::S(qbits[0]),
+            "Sd" => Self::Sd(qbits[0]),
+            "SqrtX" => Self::SqrtX(qbits[0]),
+            "SqrtXd" => Self::SqrtXd(qbits[0]),
+            "CX" => Self::CNOT(qbits[0], qbits[1]),
+            "CNOT" => Self::CNOT(qbits[0], qbits[1]),
+            "CZ" => Self::CZ(qbits[0], qbits[1]),
+            _ => panic!("Unknown gate {}", gate),
+        }
+    }
+    pub fn arity(&self) -> usize {
+        match self {
+            CliffordGate::CNOT(_, _) => 2,
+            CliffordGate::CZ(_, _) => 2,
+            _ => 1,
+        }
+    }
 }
 #[pyclass]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CliffordCircuit {
     pub nqbits: usize,
     pub gates: Vec<CliffordGate>,
@@ -44,6 +64,23 @@ impl CliffordCircuit {
         Self {
             nqbits,
             gates: Vec::new(),
+        }
+    }
+    pub fn from_vec(gates: Vec<(String, Vec<usize>)>) -> Self {
+        let mut nqbits = 0;
+        for (_, qbits) in gates.iter() {
+            for qbit in qbits {
+                if qbit + 1 > nqbits {
+                    nqbits = qbit + 1;
+                }
+            }
+        }
+        Self {
+            nqbits,
+            gates: gates
+                .iter()
+                .map(|(gate, qbits)| CliffordGate::from_vec(gate, qbits))
+                .collect(),
         }
     }
 

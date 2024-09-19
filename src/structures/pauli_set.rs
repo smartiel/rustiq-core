@@ -42,7 +42,7 @@ impl PauliSet {
     }
     /// Allocate a set of m n-qubit Pauli operators set to the identity
     pub fn new_empty(n: usize, m: usize) -> Self {
-        let nstrides = get_stride(m - 1);
+        let nstrides = get_stride(m) + 1;
         Self {
             n,
             nstrides,
