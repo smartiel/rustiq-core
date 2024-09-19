@@ -112,7 +112,8 @@ fn graph_state_and_b_synthesis(
                     target[j + i] = b_matrix[i][j];
                 }
             }
-            let solution = information_set_decoding(&mut parities, &mut target, niter);
+            let solution = information_set_decoding(&mut parities, &mut target, niter, true);
+            let solution = solution.expect("Something went wrong during syndrome decoding :/");
             let mut new_circuit = CliffordCircuit::new(graph.n);
             let moves: Vec<Type> = solution
                 .iter()

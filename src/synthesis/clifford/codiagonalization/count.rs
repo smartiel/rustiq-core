@@ -37,7 +37,8 @@ fn reduce_x_part(pauli_set: &PauliSet, niter: usize) -> (CliffordCircuit, Vec<us
         // }
         let target = &x_table[i];
         let (parities, moves) = gather_parities(&x_table, &cnot_circuit, i);
-        let solution = information_set_decoding(&parities, target, niter);
+        let solution = information_set_decoding(&parities, target, niter, true);
+        let solution = solution.expect("Something went wrong during syndrome decoding :/");
         let moves: Vec<_> = solution
             .iter()
             .enumerate()

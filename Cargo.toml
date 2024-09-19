@@ -8,11 +8,9 @@ repository = "https://github.com/smartiel/rustiq-core"
 documentation = "https://docs.rs/rustiq-core"
 homepage = "https://github.com/smartiel/rustiq-core"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 pyo3 = { version = "0.18.2", features = ["extension-module"] }
 petgraph = "0.6.3"
 itertools = "0.10.5"
 rand = "0.8.5"
-
