@@ -10,7 +10,6 @@ homepage = "https://github.com/smartiel/rustiq-core"
 
 
 [dependencies]
-pyo3 = { version = "0.18.2", features = ["extension-module"] }
 petgraph = "0.6.3"
 itertools = "0.10.5"
 rand = "0.8.5"
