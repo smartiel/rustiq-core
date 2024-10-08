@@ -1,13 +1,12 @@
 [package]
 name = "rustiq-core"
 description = "Quantum circuit synthesis library in rust"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2021"
 license-file = "LICENSE.txt"
 repository = "https://github.com/smartiel/rustiq-core"
 documentation = "https://docs.rs/rustiq-core"
 homepage = "https://github.com/smartiel/rustiq-core"
-
 
 [dependencies]
 petgraph = "0.6.3"
