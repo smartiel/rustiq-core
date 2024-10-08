@@ -1,4 +1,3 @@
-use pyo3::prelude::*;
 use rand::Rng;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CliffordGate {
@@ -52,7 +51,6 @@ impl CliffordGate {
         }
     }
 }
-#[pyclass]
 #[derive(Debug, Clone)]
 pub struct CliffordCircuit {
     pub nqbits: usize,

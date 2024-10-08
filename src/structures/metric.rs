@@ -1,6 +1,4 @@
 use super::CliffordCircuit;
-use pyo3::prelude::*;
-#[pyclass]
 #[derive(Debug, Clone)]
 pub enum Metric {
     COUNT,
