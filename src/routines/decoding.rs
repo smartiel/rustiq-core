@@ -1,7 +1,7 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-pub fn syndrome_decoding(parities: &Vec<Vec<bool>>, input_target: &Vec<bool>) -> Option<Vec<bool>> {
+pub fn syndrome_decoding(parities: &[Vec<bool>], input_target: &Vec<bool>) -> Option<Vec<bool>> {
     let mut target = input_target.clone();
     let mut solution = vec![false; parities.len()];
     let mut hweight = target.iter().filter(|a| **a).count();
@@ -40,18 +40,18 @@ pub fn syndrome_decoding(parities: &Vec<Vec<bool>>, input_target: &Vec<bool>) ->
     if true_target != *input_target {
         return None;
     }
-    return Some(solution);
+    Some(solution)
 }
 
-fn colop(parities: &mut Vec<Vec<bool>>, i: usize, j: usize) {
-    for k in 0..parities.len() {
-        parities[k][j] ^= parities[k][i];
+fn colop(parities: &mut [Vec<bool>], i: usize, j: usize) {
+    for row in parities.iter_mut() {
+        row[j] ^= row[i];
     }
 }
 
 fn shuffle_parities(
     parities: &mut Vec<Vec<bool>>,
-    target: &mut Vec<bool>,
+    target: &mut [bool],
     row_ech: bool,
 ) -> Vec<usize> {
     let n = parities.first().unwrap().len();
@@ -94,7 +94,7 @@ fn shuffle_parities(
     row_permutation
 }
 
-fn fix_permutation(solution: &Vec<bool>, permutation: &Vec<usize>) -> Vec<bool> {
+fn fix_permutation(solution: &[bool], permutation: &[usize]) -> Vec<bool> {
     let mut new_solution = vec![false; solution.len()];
     for (i, j) in permutation.iter().enumerate() {
         new_solution[*j] = solution[i];
@@ -103,7 +103,7 @@ fn fix_permutation(solution: &Vec<bool>, permutation: &Vec<usize>) -> Vec<bool> 
 }
 
 pub fn information_set_decoding(
-    input_parities: &Vec<Vec<bool>>,
+    input_parities: &[Vec<bool>],
     input_target: &Vec<bool>,
     ntries: usize,
     row_ech: bool,
@@ -111,10 +111,10 @@ pub fn information_set_decoding(
     let mut best_solution = None;
     let mut best_cost = None;
     for _ in 0..ntries {
-        let mut parities = input_parities.clone();
+        let mut parities = input_parities.to_owned();
         let mut target = input_target.clone();
         let permutation = shuffle_parities(&mut parities, &mut target, row_ech);
-        let solution = syndrome_decoding(&parities, &mut target);
+        let solution = syndrome_decoding(&parities, &target);
         if let Some(solution) = solution {
             let solution = fix_permutation(&solution, &permutation);
             let cost = solution.iter().filter(|a| **a).count();

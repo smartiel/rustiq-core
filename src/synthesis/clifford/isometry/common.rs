@@ -27,7 +27,7 @@ pub fn extract_abcd(isometry: &IsometryTableau) -> (Matrix, Matrix, Matrix, Matr
             d[j][i] = vec[j];
         }
     }
-    return (a, b, c, d);
+    (a, b, c, d)
 }
 
 fn make_b_full_rank(
@@ -47,7 +47,7 @@ fn make_b_full_rank(
             circuit.gates.push(CliffordGate::H(i));
         }
     }
-    assert_eq!(f2_rank(&b), b.len());
+    assert_eq!(f2_rank(b), b.len());
     circuit
 }
 
@@ -58,7 +58,7 @@ pub fn decompose(isometry: &IsometryTableau) -> (Matrix, Matrix, Matrix, Cliffor
     let b_k: Matrix = inv_b.clone().drain(..isometry.n).collect();
     let gn = mult_f2(&a, &inv_b);
     let gk = mult_f2(&inv_b, &d).drain(..isometry.n).collect();
-    return (gk, gn, b_k, piece);
+    (gk, gn, b_k, piece)
 }
 
 pub fn fix_phases(isometry: &IsometryTableau, circuit: &mut CliffordCircuit) {

@@ -17,7 +17,7 @@ pub fn isometry_synthesis(
         Metric::DEPTH => isometry_depth_synthesis(isometry),
     };
     fix_phases(isometry, &mut result);
-    return result;
+    result
 }
 
 #[cfg(test)]

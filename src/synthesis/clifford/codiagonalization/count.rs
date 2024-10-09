@@ -5,15 +5,15 @@ use crate::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, Pauli
 use crate::synthesis::clifford::graph_state::synthesize_graph_state;
 
 fn gather_parities(
-    input_table: &Vec<Vec<bool>>,
+    input_table: &[Vec<bool>],
     circuit: &CliffordCircuit,
     k: usize,
 ) -> (Vec<Vec<bool>>, Vec<(usize, usize)>) {
-    let mut x_table = input_table.clone();
+    let mut x_table = input_table.to_owned();
     let mut moves = Vec::new();
     let mut parities = Vec::new();
-    for i in 0..k {
-        parities.push(x_table[i].clone());
+    for (i, row) in x_table.iter().enumerate().take(k) {
+        parities.push(row.clone());
         moves.push((0, i));
     }
     for (index, gate) in circuit.gates.iter().enumerate() {
@@ -25,11 +25,11 @@ fn gather_parities(
             panic!("This shouldn't happen");
         }
     }
-    return (parities, moves);
+    (parities, moves)
 }
 
 fn reduce_x_part(pauli_set: &PauliSet, niter: usize) -> (CliffordCircuit, Vec<usize>, GraphState) {
-    let (mut circuit, row_perm, rank, (mut z_table, mut x_table)) = make_full_rank(&pauli_set);
+    let (mut circuit, row_perm, rank, (mut z_table, mut x_table)) = make_full_rank(pauli_set);
     let mut cnot_circuit = CliffordCircuit::new(pauli_set.n);
     for i in rank..x_table.len() {
         // if all(z_table[i].iter(), |x| !*x) {
@@ -54,7 +54,7 @@ fn reduce_x_part(pauli_set: &PauliSet, niter: usize) -> (CliffordCircuit, Vec<us
             }
         }
         for (j, gate) in cnot_circuit.gates.iter().enumerate() {
-            new_circuit.gates.push(gate.clone());
+            new_circuit.gates.push(*gate);
             for (gindex, qbit) in moves.iter() {
                 if *gindex == j + 1 {
                     new_circuit.gates.push(CliffordGate::CNOT(*qbit, i));
@@ -73,8 +73,8 @@ fn reduce_x_part(pauli_set: &PauliSet, niter: usize) -> (CliffordCircuit, Vec<us
 
     let mut graph_state = GraphState::new(rank);
     for col in 0..rank {
-        for row in 0..rank {
-            graph_state.adj[row][col] = z_table[row][col];
+        for (row_index, row) in z_table.iter().enumerate().take(rank) {
+            graph_state.adj[row_index][col] = row[col];
         }
     }
     circuit.extend_with(&permuted_circuit);
@@ -86,10 +86,10 @@ pub fn codiagonalize_count(pauli_set: &PauliSet, niter: usize) -> CliffordCircui
     let gs_synth = synthesize_graph_state(&graph, &Metric::COUNT, niter);
     let gs_synth = permute_circuit(&gs_synth, &perm);
     circuit.extend_with(&gs_synth.dagger());
-    for i in 0..graph.n {
-        circuit.gates.push(CliffordGate::H(perm[i]));
+    for bit in perm.iter().take(graph.n) {
+        circuit.gates.push(CliffordGate::H(*bit));
     }
-    return circuit;
+    circuit
 }
 
 #[cfg(test)]

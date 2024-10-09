@@ -24,7 +24,7 @@ fn permute_input(pset: &mut PauliSet) -> Vec<usize> {
     permutation
 }
 
-fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
+fn permute_circuit(circuit: &CliffordCircuit, permutation: &[usize]) -> CliffordCircuit {
     let mut output = CliffordCircuit::new(circuit.nqbits);
     for gate in circuit.gates.iter() {
         match gate {
@@ -53,7 +53,7 @@ pub fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
         }
     }
     for gate in circuit.gates.iter() {
-        bucket.conjugate_with_gate(&gate);
+        bucket.conjugate_with_gate(gate);
 
         for i in 0..bucket.len() {
             if bucket.support_size(i) == 1 {
@@ -97,10 +97,10 @@ pub fn greedy_pauli_network(
     if fix_clifford {
         let mut tableau = IsometryTableau::new(circuit.nqbits, 0);
         tableau.conjugate_with_circuit(&circuit.dagger());
-        let fix = isometry_synthesis(&mut tableau, &metric, 100);
+        let fix = isometry_synthesis(&tableau, metric, 100);
         circuit.extend_with(&fix);
     }
-    return circuit;
+    circuit
 }
 
 #[cfg(test)]

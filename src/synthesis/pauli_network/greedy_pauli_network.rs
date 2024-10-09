@@ -63,7 +63,7 @@ pub fn chunk_to_circuit(
             _ => {}
         }
     }
-    return circuit_piece;
+    circuit_piece
 }
 
 pub fn conjugate_with_chunk(
@@ -150,11 +150,11 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     let mut best_args: [usize; 2] = [0, 0];
     let support = bucket.get_support(0);
     for i1 in 0..support.len() {
-        for i2 in  0..i1 {
+        for i2 in 0..i1 {
             let qbit1 = support[i1];
             let qbit2 = support[i2];
-            let init_id_count_1 = bucket.count_id(qbit1) ;
-            let init_id_count_2 = bucket.count_id(qbit2) ;
+            let init_id_count_1 = bucket.count_id(qbit1);
+            let init_id_count_2 = bucket.count_id(qbit2);
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
@@ -166,17 +166,17 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
                 let score = if score_1 == 0 { score_2 } else { score_1 };
                 if score > max_score {
                     max_score = score;
-                    best_chunk = chunk.clone();
+                    best_chunk = chunk;
                     best_args = [qbit1, qbit2];
                 }
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, true);
             }
         }
     }
-   
+
     conjugate_with_chunk(bucket, &best_chunk, best_args[0], best_args[1], false);
 
-    return chunk_to_circuit(&best_chunk, best_args[0], best_args[1], bucket.n);
+    chunk_to_circuit(&best_chunk, best_args[0], best_args[1], bucket.n)
 }
 
 fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
@@ -199,7 +199,7 @@ fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usiz
                 let score: i32 = new_count as i32 - init_id_count as i32;
                 if score > max_score {
                     max_score = score;
-                    best_chunk = chunk.clone();
+                    best_chunk = chunk;
                 }
                 best_chunks.insert((qbit1, qbit2), best_chunk);
                 // undoing the conjugation
@@ -211,7 +211,7 @@ fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usiz
             }
         }
     }
-    return (graph, best_chunks);
+    (graph, best_chunks)
 }
 
 fn single_synthesis_step_depth(bucket: &mut PauliSet) -> CliffordCircuit {
@@ -229,14 +229,14 @@ fn single_synthesis_step_depth(bucket: &mut PauliSet) -> CliffordCircuit {
         conjugate_with_chunk(bucket, &chunk, qbit1.index(), qbit2.index(), false);
     }
 
-    return circuit_piece;
+    circuit_piece
 }
 
 pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> CliffordCircuit {
-    return match metric {
+    match metric {
         Metric::COUNT => single_synthesis_step_count(bucket),
         Metric::DEPTH => single_synthesis_step_depth(bucket),
-    };
+    }
 }
 
 pub fn pauli_network_synthesis(
@@ -244,7 +244,7 @@ pub fn pauli_network_synthesis(
     metric: &Metric,
     skip_sort: bool,
 ) -> CliffordCircuit {
-    if bucket.len() == 0 {
+    if bucket.is_empty() {
         return CliffordCircuit::new(0);
     }
 
@@ -255,16 +255,16 @@ pub fn pauli_network_synthesis(
         if !skip_sort {
             bucket.support_size_sort();
         }
-        while bucket.support_size(0) <= 1 && bucket.len() > 0 {
+        while bucket.support_size(0) <= 1 && !bucket.is_empty() {
             bucket.pop();
         }
-        if bucket.len() == 0 {
+        if bucket.is_empty() {
             break;
         }
-        let circuit_piece = single_synthesis_step(bucket, &metric);
+        let circuit_piece = single_synthesis_step(bucket, metric);
         output.extend_with(&circuit_piece);
     }
-    return output;
+    output
 }
 
 #[cfg(test)]
