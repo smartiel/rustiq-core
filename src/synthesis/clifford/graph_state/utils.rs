@@ -26,7 +26,7 @@ fn make_x_full_rank(z_part: &mut Matrix, x_part: &mut Matrix) -> CliffordCircuit
             circuit.gates.push(CliffordGate::H(i));
         }
     }
-    assert_eq!(f2_rank(&x_part), x_part.len());
+    assert_eq!(f2_rank(x_part), x_part.len());
     circuit
 }
 

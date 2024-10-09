@@ -7,12 +7,7 @@ use crate::synthesis::clifford::graph_state::synthesize_graph_state;
 use petgraph::algo::maximum_matching;
 use petgraph::prelude::*;
 
-fn score_matrix(
-    table: &Vec<Vec<bool>>,
-    qbits_used: &Vec<bool>,
-    row: bool,
-    rank: usize,
-) -> Vec<Vec<i32>> {
+fn score_matrix(table: &[Vec<bool>], qbits_used: &[bool], row: bool, rank: usize) -> Vec<Vec<i32>> {
     if row {
         let mut score_mat = vec![vec![0; table.len()]; table.len()];
         for i in 0..table.len() {
@@ -37,9 +32,9 @@ fn score_matrix(
         for j in 0..k {
             if i != j && !qbits_used[i] && !qbits_used[j] {
                 let mut sum = 0;
-                for m in 0..table.len() {
-                    if table[m][i] {
-                        sum += if table[m][j] { 1 } else { -1 };
+                for row in table {
+                    if row[i] {
+                        sum += if row[j] { 1 } else { -1 };
                     }
                 }
                 score_mat[i][j] = sum;
@@ -48,12 +43,12 @@ fn score_matrix(
             }
         }
     }
-    return score_mat;
+    score_mat
 }
 
 fn pick_best_operation(
-    scores_rows: &Vec<Vec<i32>>,
-    scores_cols: &Vec<Vec<i32>>,
+    scores_rows: &[Vec<i32>],
+    scores_cols: &[Vec<i32>],
 ) -> (bool, i32, (usize, usize)) {
     let mut best_score = -1;
     let mut best_control = 0;
@@ -78,10 +73,10 @@ fn pick_best_operation(
             }
         }
     }
-    return (is_row, best_score, (best_control, best_target));
+    (is_row, best_score, (best_control, best_target))
 }
 
-fn has_ones(matrix: &Vec<Vec<bool>>) -> bool {
+fn has_ones(matrix: &[Vec<bool>]) -> bool {
     for row in matrix.iter() {
         for elem in row.iter() {
             if *elem {
@@ -89,23 +84,19 @@ fn has_ones(matrix: &Vec<Vec<bool>>) -> bool {
             }
         }
     }
-    return false;
+    false
 }
 
-fn run_matching(
-    table: &Vec<Vec<bool>>,
-    row_used: &Vec<bool>,
-    col_used: &Vec<bool>,
-) -> CliffordCircuit {
+fn run_matching(table: &[Vec<bool>], row_used: &[bool], col_used: &[bool]) -> CliffordCircuit {
     let ncols = col_used.len();
     let nrows = row_used.len();
     let mut mgraph: UnGraph<(), i32> = UnGraph::new_undirected();
     for _ in 0..ncols + nrows {
         mgraph.add_node(());
     }
-    for i in 0..ncols {
+    for (i, col) in col_used.iter().enumerate().take(ncols) {
         for j in 0..nrows {
-            if !col_used[i] && !row_used[j] && table[j][i] {
+            if !col && !row_used[j] && table[j][i] {
                 mgraph.add_edge(NodeIndex::new(i), NodeIndex::new(ncols + j), 1);
             }
         }
@@ -121,8 +112,8 @@ fn run_matching(
 }
 
 fn reduce_x_part(pauli_set: &PauliSet) -> (CliffordCircuit, Vec<usize>, GraphState) {
-    let (mut circuit, row_perm, rank, (mut z_table, mut x_table)) = make_full_rank(&pauli_set);
-    let mut table: Vec<Vec<bool>> = x_table.iter().skip(rank).map(|r| r.clone()).collect();
+    let (mut circuit, row_perm, rank, (mut z_table, mut x_table)) = make_full_rank(pauli_set);
+    let mut table: Vec<Vec<bool>> = x_table.iter().skip(rank).cloned().collect();
     let mut cnot_circuit = CliffordCircuit::new(circuit.nqbits);
     while has_ones(&table) {
         let mut used_rows = vec![false; table.len()];
@@ -166,8 +157,8 @@ fn reduce_x_part(pauli_set: &PauliSet) -> (CliffordCircuit, Vec<usize>, GraphSta
     diagonalize(&mut x_table, &mut z_table, rank);
     let mut graph_state = GraphState::new(rank);
     for col in 0..rank {
-        for row in 0..rank {
-            graph_state.adj[row][col] = z_table[row][col];
+        for (row_index, row) in z_table.iter().enumerate().take(rank) {
+            graph_state.adj[row_index][col] = row[col];
         }
     }
     for col in 0..rank {
@@ -178,7 +169,7 @@ fn reduce_x_part(pauli_set: &PauliSet) -> (CliffordCircuit, Vec<usize>, GraphSta
 
     let permuted_cnots = permute_circuit(&cnot_circuit, &row_perm);
     circuit.extend_with(&permuted_cnots);
-    return (circuit, row_perm, graph_state);
+    (circuit, row_perm, graph_state)
 }
 
 pub fn codiagonalize_depth(pauli_set: &PauliSet) -> CliffordCircuit {
@@ -186,10 +177,10 @@ pub fn codiagonalize_depth(pauli_set: &PauliSet) -> CliffordCircuit {
     let gs_synth = synthesize_graph_state(&graph, &Metric::DEPTH, 0);
     let gs_synth = permute_circuit(&gs_synth, &perm);
     circuit.extend_with(&gs_synth.dagger());
-    for i in 0..graph.n {
-        circuit.gates.push(CliffordGate::H(perm[i]));
+    for bit in perm.iter().take(graph.n) {
+        circuit.gates.push(CliffordGate::H(*bit));
     }
-    return circuit;
+    circuit
 }
 
 #[cfg(test)]

@@ -30,7 +30,7 @@ impl Pauli {
         let (their_z, their_x) = other.data.split_at(self.n);
         let p1 = my_z.iter().zip(their_x.iter()).map(|(a, b)| a & b);
         let p2 = my_x.iter().zip(their_z.iter()).map(|(a, b)| a & b);
-        return (p1.zip(p2).map(|(a, b)| a ^ b).filter(|a| *a).count() & 1) == 0;
+        (p1.zip(p2).map(|(a, b)| a ^ b).filter(|a| *a).count() & 1) == 0
     }
 }
 
@@ -52,7 +52,7 @@ impl ops::Mul<Pauli> for Pauli {
         for i in 0..2 * self.n {
             output.data[i] = self.data[i] ^ _rhs.data[i];
         }
-        output.phase = output.phase % 4;
+        output.phase %= 4;
         output
     }
 }

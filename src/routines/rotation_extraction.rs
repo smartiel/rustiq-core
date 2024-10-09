@@ -3,7 +3,7 @@
 use crate::structures::{PauliLike, Tableau};
 
 pub fn extract_rotations(
-    circuit: &Vec<(String, Vec<usize>)>,
+    circuit: &[(String, Vec<usize>)],
     nqubits: usize,
 ) -> (Vec<(bool, String)>, Tableau) {
     let mut clifford = Tableau::new(nqubits);

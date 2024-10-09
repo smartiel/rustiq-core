@@ -6,9 +6,18 @@ pub enum Parameter {
     Concrete(f64),
 }
 
+impl std::fmt::Display for Parameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Abstract(x) => f.write_str(x.as_str()),
+            Self::Concrete(x) => f.write_str(x.to_string().as_str()),
+        }
+    }
+}
+
 impl Parameter {
     pub fn zero() -> Self {
-        return Self::Concrete(0.0);
+        Self::Concrete(0.0)
     }
     pub fn is_zero(&self) -> bool {
         match self {
@@ -29,7 +38,7 @@ impl Parameter {
                 let y = x % (2. * std::f64::consts::PI);
                 let k = y.div_euclid(std::f64::consts::PI / 2.);
                 let rem = y % (std::f64::consts::PI / 2.);
-                return (Self::Concrete(rem), k as i32);
+                (Self::Concrete(rem), k as i32)
             }
         }
     }
@@ -52,12 +61,6 @@ impl Parameter {
             Self::Concrete(x) => Self::Abstract(x.to_string()),
         }
     }
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Abstract(x) => x.clone(),
-            Self::Concrete(x) => x.to_string(),
-        }
-    }
 }
 impl ops::Add<Parameter> for Parameter {
     type Output = Parameter;
@@ -69,7 +72,7 @@ impl ops::Add<Parameter> for Parameter {
             }
             _ => {
                 let mut new_expr = self.to_string();
-                new_expr.push_str("+");
+                new_expr.push('+');
                 new_expr.push_str(&_rhs.to_string());
                 Self::Abstract(new_expr)
             }
@@ -84,7 +87,7 @@ impl ops::AddAssign<Parameter> for Parameter {
             }
             _ => {
                 let mut new_expr = self.to_string();
-                new_expr.push_str("+");
+                new_expr.push('+');
                 new_expr.push_str(&_rhs.to_string());
                 *self = Self::Abstract(new_expr);
             }
