@@ -3,10 +3,10 @@ use super::pauli_set::PauliSet;
 use super::{CliffordCircuit, IsometryTableau};
 use rand::Rng;
 
-fn compute_phase_product_pauli(pset0: &PauliSet, vec: &Vec<bool>) -> bool {
+fn compute_phase_product_pauli(pset0: &PauliSet, vec: &[bool]) -> bool {
     let mut phase = false;
-    for j in 0..2 * pset0.n {
-        phase ^= pset0.get_phase(j) & vec[j];
+    for (j, item) in vec.iter().enumerate().take(2 * pset0.n) {
+        phase ^= pset0.get_phase(j) & item;
     }
     let mut ifact: u8 = 0;
     for i in 0..pset0.n {
@@ -14,12 +14,12 @@ fn compute_phase_product_pauli(pset0: &PauliSet, vec: &Vec<bool>) -> bool {
             ifact += 1;
         }
     }
-    ifact = ifact % 4;
+    ifact %= 4;
     for j in 0..pset0.n {
         let mut x: bool = false;
         let mut z: bool = false;
-        for i in 0..2 * pset0.n {
-            if vec[i] {
+        for (i, item) in vec.iter().enumerate().take(2 * pset0.n) {
+            if *item {
                 let x1: bool = pset0.get_entry(j, i);
                 let z1: bool = pset0.get_entry(j + pset0.n, i);
                 let entry = (x1, z1, x, z);
@@ -31,11 +31,11 @@ fn compute_phase_product_pauli(pset0: &PauliSet, vec: &Vec<bool>) -> bool {
                 }
                 x ^= x1;
                 z ^= z1;
-                ifact = ifact % 4;
+                ifact %= 4;
             }
         }
     }
-    return (((ifact % 4) >> 1) != 0) ^ phase;
+    (((ifact % 4) >> 1) != 0) ^ phase
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,7 +59,7 @@ impl Tableau {
     pub fn from_circuit(circuit: &CliffordCircuit) -> Self {
         let mut tab = Self::new(circuit.nqbits);
         tab.conjugate_with_circuit(circuit);
-        return tab;
+        tab
     }
     /// Generates a random Tableau (no garantuees, just here for testing)
     pub fn random(n: usize) -> Self {
@@ -87,11 +87,11 @@ impl Tableau {
                 }
             }
         }
-        return iso;
+        iso
     }
     /// Build a Tableau from a PauliSet
     pub fn from_operators(logicals: &Vec<(bool, String)>) -> Self {
-        if logicals.len() == 0 {
+        if logicals.is_empty() {
             return Self::new(0);
         }
         let nqbits = logicals[0].1.len();
@@ -119,9 +119,9 @@ impl Tableau {
         for i in 0..2 * self.logicals.n {
             new_logicals.set_phase(i, new_logicals.get_phase(i) ^ prod.logicals.get_phase(i));
         }
-        return Self {
+        Self {
             logicals: new_logicals,
-        };
+        }
     }
 
     pub fn get_inverse_z(&self, qbit: usize) -> (bool, String) {
@@ -143,7 +143,7 @@ impl Tableau {
             }
         }
         let phase = compute_phase_product_pauli(&self.logicals, &as_vec_bool);
-        return (phase, string);
+        (phase, string)
     }
     pub fn get_inverse_x(&self, qbit: usize) -> (bool, String) {
         let (_, string) = self.logicals.get_inverse_x(qbit);
@@ -164,7 +164,7 @@ impl Tableau {
             }
         }
         let phase = compute_phase_product_pauli(&self.logicals, &as_vec_bool);
-        return (phase, string);
+        (phase, string)
     }
     /// Lifts the Taleau into an IsometryTableau (k = 0)
     pub fn to_isometry(self) -> IsometryTableau {
@@ -222,13 +222,13 @@ impl std::ops::Mul<Tableau> for Tableau {
         let mut new_tableau = Tableau::new(self.logicals.n);
         for i in 0..2 * self.logicals.n {
             let (mut phase, col) = rhs.logicals.get_as_vec_bool(i);
-            for j in 0..2 * self.logicals.n {
-                phase ^= self.logicals.get_phase(j) & col[j];
+            for (j, item) in col.iter().enumerate().take(2 * self.logicals.n) {
+                phase ^= self.logicals.get_phase(j) & item;
             }
             new_tableau.logicals.set_phase(i, phase);
         }
         let mut ifacts = rhs.logicals.get_i_factors();
-        for k in 0..2 * self.logicals.n {
+        for (k, item) in ifacts.iter_mut().enumerate().take(2 * self.logicals.n) {
             for j in 0..self.logicals.n {
                 let mut x: bool = false;
                 let mut z: bool = false;
@@ -238,18 +238,18 @@ impl std::ops::Mul<Tableau> for Tableau {
                         let z1: bool = self.logicals.get_entry(j + self.logicals.n, i);
                         let entry = (x1, z1, x, z);
                         if LOOKUP_0.contains(&entry) {
-                            ifacts[k] += 1;
+                            *item += 1;
                         }
                         if LOOKUP_1.contains(&entry) {
-                            ifacts[k] += 3;
+                            *item += 3;
                         }
                         x ^= x1;
                         z ^= z1;
-                        ifacts[k] = ifacts[k] % 4;
+                        *item %= 4;
                     }
                 }
             }
-            ifacts[k] = ifacts[k] % 4;
+            *item %= 4;
         }
         let p: Vec<bool> = ifacts.into_iter().map(|v| 0 != ((v % 4) >> 1)).collect();
         for (i, ph) in p.iter().enumerate() {

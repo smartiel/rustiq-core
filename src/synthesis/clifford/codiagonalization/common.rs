@@ -15,7 +15,7 @@ pub fn build_table(pauli_set: &PauliSet) -> (Vec<Vec<bool>>, Vec<Vec<bool>>) {
     (table_z, table_x)
 }
 
-fn swap_rows(table: &mut Vec<Vec<bool>>, rows: &Vec<usize>) {
+fn swap_rows(table: &mut Vec<Vec<bool>>, rows: &[usize]) {
     let mut new_table = Vec::new();
     for j in rows.iter() {
         new_table.push(table[*j].clone());
@@ -23,14 +23,14 @@ fn swap_rows(table: &mut Vec<Vec<bool>>, rows: &Vec<usize>) {
     *table = new_table;
 }
 
-pub fn make_full_rank(
-    pauli_set: &PauliSet,
-) -> (
+type FullRank = (
     CliffordCircuit,
     Vec<usize>,
     usize,
     (Vec<Vec<bool>>, Vec<Vec<bool>>),
-) {
+);
+
+pub fn make_full_rank(pauli_set: &PauliSet) -> FullRank {
     let (mut t_z, mut t_x) = build_table(pauli_set);
     let mut circuit = CliffordCircuit::new(pauli_set.n);
     for i in 0..pauli_set.n {
@@ -46,8 +46,8 @@ pub fn make_full_rank(
     let mut fr_rows = Vec::new();
     let mut wit = Vec::new();
     let mut rk = 0;
-    for i in 0..pauli_set.n {
-        wit.push(t_x[i].clone());
+    for (i, item) in t_x.iter().enumerate().take(pauli_set.n) {
+        wit.push(item.clone());
         if f2_rank(&wit) == rk + 1 {
             fr_rows.push(i);
             rk += 1;
@@ -63,9 +63,9 @@ pub fn make_full_rank(
     swap_rows(&mut t_x, &fr_rows);
     swap_rows(&mut t_z, &fr_rows);
     diagonalize(&mut t_x, &mut t_z, rk);
-    return (circuit, fr_rows, rk, (t_z, t_x));
+    (circuit, fr_rows, rk, (t_z, t_x))
 }
-pub fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
+pub fn permute_circuit(circuit: &CliffordCircuit, permutation: &[usize]) -> CliffordCircuit {
     let mut permuted_circuit = CliffordCircuit::new(circuit.nqbits);
     for gate in circuit.gates.iter() {
         match gate {
