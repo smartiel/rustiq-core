@@ -48,7 +48,7 @@ pub fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
     let mut hit_map: HashSet<usize> = HashSet::new();
     let mut bucket = PauliSet::from_slice(input);
     for i in 0..bucket.len() {
-        if bucket.support_size(i) == 1 {
+        if bucket.support_size(i) == 0 || bucket.support_size(i) == 1 {
             hit_map.insert(i);
         }
     }
@@ -70,7 +70,7 @@ pub fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
 }
 
 pub fn greedy_pauli_network(
-    operator_sequence: &mut PauliSet,
+    operator_sequence: &PauliSet,
     metric: &Metric,
     preserve_order: bool,
     nshuffles: usize,

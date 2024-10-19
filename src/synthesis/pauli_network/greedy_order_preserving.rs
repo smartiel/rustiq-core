@@ -9,7 +9,7 @@ pub fn pauli_network_synthesis_no_permutation(
 ) -> CliffordCircuit {
     let mut dag = PauliDag::from_pauli_set(axes.clone());
     let mut circuit = CliffordCircuit::new(dag.pauli_set.n);
-    while dag.front_layer.len() > 0 {
+    while dag.front_nodes.len() > 0 {
         circuit.extend_with(&dag.single_step_synthesis(&metric, skip_sort));
     }
     return circuit;
