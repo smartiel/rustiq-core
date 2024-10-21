@@ -79,7 +79,7 @@ impl PauliDag {
 
     /// Remove synthesized operations from the front layer and update
     /// the front layer accordingly.
-    fn update_front_nodes(&mut self) {
+    pub(crate) fn update_front_nodes(&mut self) {
         let mut unprocessed = self.front_nodes.clone();
         self.front_nodes = Vec::new();
         // For some reason this is less performant than cloning:
