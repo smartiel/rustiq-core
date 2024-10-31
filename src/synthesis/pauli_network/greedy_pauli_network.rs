@@ -297,7 +297,7 @@ fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
 
 
 
-fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
+fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
     let mut best_chunks: HashMap<(usize, usize), Chunk> = HashMap::new();
     for _ in 0..bucket.n {
@@ -310,18 +310,13 @@ fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usiz
             let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
             let mut max_score = 0;
             let mut best_chunk: Chunk = [None; 3];
-            for chunk in ALL_CHUNKS {
-                // conjugating with the chunk
-                conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
-                let new_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
-                let score: i32 = new_count as i32 - init_id_count as i32;
+            for c in 0..18 {
+                let score = compute_score(bucket, qbit1, qbit2, c) as i32;
                 if score > max_score {
                     max_score = score;
-                    best_chunk = chunk.clone();
+                    best_chunk = ALL_CHUNKS[c].clone();
                 }
                 best_chunks.insert((qbit1, qbit2), best_chunk);
-                // undoing the conjugation
-                conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, true);
             }
             // If there exists a chunk that improves the score, we add an edge labeled with the score in the graph
             if max_score > 0 {
@@ -332,7 +327,7 @@ fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usiz
     return (graph, best_chunks);
 }
 
-fn single_synthesis_step_depth(bucket: &mut PauliSet) -> CliffordCircuit {
+fn single_synthesis_step_depth(bucket: &PauliSet) -> CliffordCircuit {
     let (graph, best_chunks) = build_graph(bucket);
     let matching = maximum_matching(&graph);
     let mut circuit_piece = CliffordCircuit::new(bucket.n);
@@ -344,7 +339,6 @@ fn single_synthesis_step_depth(bucket: &mut PauliSet) -> CliffordCircuit {
             qbit2.index(),
             bucket.n,
         ));
-        conjugate_with_chunk(bucket, &chunk, qbit1.index(), qbit2.index(), false);
     }
 
     return circuit_piece;
@@ -381,6 +375,7 @@ pub fn pauli_network_synthesis(
         }
         let circuit_piece = single_synthesis_step(bucket, &metric);
         output.extend_with(&circuit_piece);
+        bucket.conjugate_with_circuit(&circuit_piece);
     }
     return output;
 }
