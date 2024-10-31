@@ -144,40 +144,158 @@ pub fn conjugate_with_chunk(
     }
 }
 
-fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
+/// Indexes all 2-qubit Paulis.
+#[allow(dead_code)]
+static INDEX_TO_PAULI_PAIR: [&str; 16] = [
+    "II", "IZ", "IX", "IY", "ZI", "ZZ", "ZX", "ZY", "XI", "XZ", "XX", "XY", "YI", "YZ", "YX", "YY",
+];
+
+/// Returns (the index of) the Pauli pair over the qubits `i` and `j` in
+/// for the Pauli operator in column `col` of `pset`.
+pub fn pauli_pair_to_index(
+    pset: &PauliSet,
+    i: usize,
+    j: usize,
+    col: usize,
+) -> usize {
+    let n = pset.n;
+    let s0 = pset.get_entry(i, col);
+    let d0 = pset.get_entry(i + n, col);
+    let s1 = pset.get_entry(j, col);
+    let d1 = pset.get_entry(j + n, col);
+
+    ((s0 as usize) << 3) | ((d0 as usize) << 2) | ((s1 as usize) << 1) | (d1 as usize)
+}
+
+/// For each chunk (indexed by `c = 0..18`), each qubit (indexed by `q = 0..1`),
+/// and each Pauli pair (indexed by `p = 0..16`), `CHUNK_CONJUGATION_SCORE[c][q][p]`
+/// is 1 iff conjugating `p` by `c` is `I` on qubit `q`.
+static CHUNK_CONJUGATION_SCORE: [[[usize; 16]; 2]; 18] = [
+    [
+        [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+    ],
+    [
+        [1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+    ],
+    [
+        [1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+    ],
+    [
+        [1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+    ],
+    [
+        [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    ],
+    [
+        [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    ],
+    [
+        [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+    ],
+    [
+        [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+    ],
+    [
+        [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+    ],
+    [
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
+    ],
+    [
+        [1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    ],
+    [
+        [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
+        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
+    ],
+    [
+        [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
+        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
+    ],
+];
+
+/// Computes the score of conjugating the Pauli pair over the qubits `i` and `j`
+/// by chunk `c`. This is equivalent to the scoring function described in the
+/// paper but uses the precomputed table lookup instead of performing conjugation.
+fn compute_score(
+    pset: &PauliSet,
+    i: usize,
+    j: usize,
+    c: usize,
+) -> usize {
+    let gain0 = (0..pset.len())
+        .take_while(|&col| CHUNK_CONJUGATION_SCORE[c][0][pauli_pair_to_index(pset, i, j, col)] > 0)
+        .count();
+    let gain1 = (0..pset.len())
+        .take_while(|&col| CHUNK_CONJUGATION_SCORE[c][1][pauli_pair_to_index(pset, i, j, col)] > 0)
+        .count();
+
+    std::cmp::max(gain0, gain1)
+}
+
+/// Finds the Clifford circuit corresponding to the best chunk to apply.
+/// The conjugation of the Pauli set by this circuit is done in the main algorithm.
+fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
     let mut max_score = -1;
-    let mut best_chunk: Chunk = [None; 3];
-    let mut best_args: [usize; 2] = [0, 0];
-    let support = bucket.get_support(0);
-    for i1 in 0..support.len() {
-        for i2 in  0..i1 {
-            let qbit1 = support[i1];
-            let qbit2 = support[i2];
-            let init_id_count_1 = bucket.count_id(qbit1) ;
-            let init_id_count_2 = bucket.count_id(qbit2) ;
-            for chunk in ALL_CHUNKS {
-                // conjugating with the chunk
-                conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
-                let new_count_1 = bucket.count_id(qbit1);
-                let new_count_2 = bucket.count_id(qbit2);
-                let score_1 = new_count_1 as i32 - init_id_count_1 as i32;
-                let score_2 = new_count_2 as i32 - init_id_count_2 as i32;
-                assert!(score_1 == 0 || score_2 == 0);
-                let score = if score_1 == 0 { score_2 } else { score_1 };
+    let mut best_i = 0;
+    let mut best_j = 0;
+    let mut best_c: usize = 0;
+
+    let support = pset.get_support(0);
+    for i in 0..support.len() {
+        for j in 0..i {
+            for c in 0..18 {
+                let score = compute_score(&pset, support[i], support[j], c) as i32;
                 if score > max_score {
                     max_score = score;
-                    best_chunk = chunk.clone();
-                    best_args = [qbit1, qbit2];
+                    best_c = c;
+                    best_i = i;
+                    best_j = j;
                 }
-                conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, true);
             }
         }
     }
-   
-    conjugate_with_chunk(bucket, &best_chunk, best_args[0], best_args[1], false);
 
-    return chunk_to_circuit(&best_chunk, best_args[0], best_args[1], bucket.n);
+    chunk_to_circuit(
+        &ALL_CHUNKS[best_c],
+        support[best_i],
+        support[best_j],
+        pset.n,
+    )
 }
+
+
 
 fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
