@@ -144,124 +144,22 @@ pub fn conjugate_with_chunk(
     }
 }
 
-/// Indexes all 2-qubit Paulis.
-#[allow(dead_code)]
-static INDEX_TO_PAULI_PAIR: [&str; 16] = [
-    "II", "IZ", "IX", "IY", "ZI", "ZZ", "ZX", "ZY", "XI", "XZ", "XX", "XY", "YI", "YZ", "YX", "YY",
-];
-
-/// Returns (the index of) the Pauli pair over the qubits `i` and `j` in
-/// for the Pauli operator in column `col` of `pset`.
-pub fn pauli_pair_to_index(
-    pset: &PauliSet,
-    i: usize,
-    j: usize,
-    col: usize,
-) -> usize {
-    let n = pset.n;
-    let s0 = pset.get_entry(i, col);
-    let d0 = pset.get_entry(i + n, col);
-    let s1 = pset.get_entry(j, col);
-    let d1 = pset.get_entry(j + n, col);
-
-    ((s0 as usize) << 3) | ((d0 as usize) << 2) | ((s1 as usize) << 1) | (d1 as usize)
-}
-
-/// For each chunk (indexed by `c = 0..18`), each qubit (indexed by `q = 0..1`),
-/// and each Pauli pair (indexed by `p = 0..16`), `CHUNK_CONJUGATION_SCORE[c][q][p]`
-/// is 1 iff conjugating `p` by `c` is `I` on qubit `q`.
-static CHUNK_CONJUGATION_SCORE: [[[usize; 16]; 2]; 18] = [
-    [
-        [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-    ],
-    [
-        [1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-        [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-    ],
-    [
-        [1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-    ],
-    [
-        [1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-    ],
-    [
-        [1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    ],
-    [
-        [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
-    ],
-    [
-        [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
-    ],
-    [
-        [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
-    ],
-    [
-        [1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
-    ],
-    [
-        [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-        [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0],
-    ],
-    [
-        [1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-    ],
-    [
-        [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
-        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
-    ],
-    [
-        [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],
-        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
-    ],
-];
-
-/// Computes the score of conjugating the Pauli pair over the qubits `i` and `j`
+/// Computes the max score of conjugating the Pauli pair over the qubits `i` and `j`
 /// by chunk `c`. This is equivalent to the scoring function described in the
 /// paper but uses the precomputed table lookup instead of performing conjugation.
-fn compute_score(
-    pset: &PauliSet,
-    i: usize,
-    j: usize,
-    c: usize,
-) -> usize {
-    let gain0 = (0..pset.len())
-        .take_while(|&col| CHUNK_CONJUGATION_SCORE[c][0][pauli_pair_to_index(pset, i, j, col)] > 0)
-        .count();
-    let gain1 = (0..pset.len())
-        .take_while(|&col| CHUNK_CONJUGATION_SCORE[c][1][pauli_pair_to_index(pset, i, j, col)] > 0)
-        .count();
+#[inline]
+fn compute_max_score(pset: &PauliSet, i: usize, j: usize, c: usize) -> usize {
+    std::cmp::max(
+        pset.count_leading_i_conjugation(i, j, 0, c),
+        pset.count_leading_i_conjugation(i, j, 1, c),
+    )
+}
 
-    std::cmp::max(gain0, gain1)
+/// Computes the sum score of conjugating the Pauli pair over the qubits `i` and `j`
+/// by chunk `c`.
+#[inline]
+fn compute_sum_score(pset: &PauliSet, i: usize, j: usize, c: usize) -> usize {
+    pset.count_leading_i_conjugation(i, j, 0, c) + pset.count_leading_i_conjugation(i, j, 1, c)
 }
 
 /// Finds the Clifford circuit corresponding to the best chunk to apply.
@@ -276,7 +174,7 @@ fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
     for i in 0..support.len() {
         for j in 0..i {
             for c in 0..18 {
-                let score = compute_score(&pset, support[i], support[j], c) as i32;
+                let score = compute_max_score(&pset, support[i], support[j], c) as i32;
                 if score > max_score {
                     max_score = score;
                     best_c = c;
@@ -295,8 +193,6 @@ fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
     )
 }
 
-
-
 fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
     let mut best_chunks: HashMap<(usize, usize), Chunk> = HashMap::new();
@@ -306,12 +202,11 @@ fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), 
     for qbit1 in 0..bucket.n {
         for qbit2 in (qbit1 + 1)..bucket.n {
             // computing the initial identity count
-
-            let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
+            let init_count = (bucket.count_leading_i(qbit1) + bucket.count_leading_i(qbit2)) as i32;
             let mut max_score = 0;
             let mut best_chunk: Chunk = [None; 3];
             for c in 0..18 {
-                let score = compute_score(bucket, qbit1, qbit2, c) as i32;
+                let score = compute_sum_score(bucket, qbit1, qbit2, c) as i32 - init_count;
                 if score > max_score {
                     max_score = score;
                     best_chunk = ALL_CHUNKS[c].clone();
