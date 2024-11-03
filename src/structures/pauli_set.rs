@@ -467,9 +467,9 @@ impl PauliSet {
     }
 
     #[inline]
-    pub fn count_leading_i(&self, qbit: usize) -> usize {
-        (0..self.noperators)
-            .take_while(|&col| self.is_i(qbit, col))
+    pub fn count_leading_i(&self, qbit: usize, order: &[usize]) -> usize {
+        order.iter()
+            .take_while(|&&col| self.is_i(qbit, col))
             .count()
     }
 
@@ -490,9 +490,9 @@ impl PauliSet {
     /// by chunk `c`. This is equivalent to the scoring function described in the
     /// paper but uses the precomputed table lookup instead of performing conjugation.
     #[inline]
-    pub fn count_leading_i_conjugation(&self, i: usize, j: usize, q: usize, c: usize) -> usize {
-        (0..self.noperators)
-            .take_while(|&col| CHUNK_CONJUGATION_SCORE[c][q][self.pauli_pair_index(i, j, col)] > 0)
+    pub fn count_leading_i_conjugation(&self, i: usize, j: usize, q: usize, c: usize, order: &[usize]) -> usize {
+        order.iter()
+            .take_while(|&&col| CHUNK_CONJUGATION_SCORE[c][q][self.pauli_pair_index(i, j, col)] > 0)
             .count()
     }
 

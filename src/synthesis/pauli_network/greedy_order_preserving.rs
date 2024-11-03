@@ -72,6 +72,15 @@ mod greedy_synthesis_tests {
         assert!(check_circuit(&axes, &circuit))
     }
     #[test]
+    fn count_synthesis_2() {
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned(), "XY".to_owned(), "IZ".to_owned(),
+        "XX".to_owned(), "ZZ".to_owned(), "YY".to_owned(), "XY".to_owned(), "IZ".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::COUNT, false);
+        println!("{circuit:?}");
+        assert!(check_circuit(&axes, &circuit))
+    }
+    #[test]
     fn depth_synthesis() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let mut input = PauliSet::from_slice(&axes);
@@ -79,7 +88,6 @@ mod greedy_synthesis_tests {
         println!("{circuit:?}");
         assert!(check_circuit(&axes, &circuit))
     }
-
     #[test]
     fn count_synthesis_ss() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];

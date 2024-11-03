@@ -148,33 +148,33 @@ pub fn conjugate_with_chunk(
 /// by chunk `c`. This is equivalent to the scoring function described in the
 /// paper but uses the precomputed table lookup instead of performing conjugation.
 #[inline]
-fn compute_max_score(pset: &PauliSet, i: usize, j: usize, c: usize) -> usize {
+fn compute_max_score(pset: &PauliSet, i: usize, j: usize, c: usize, order: &[usize]) -> usize {
     std::cmp::max(
-        pset.count_leading_i_conjugation(i, j, 0, c),
-        pset.count_leading_i_conjugation(i, j, 1, c),
+        pset.count_leading_i_conjugation(i, j, 0, c, order),
+        pset.count_leading_i_conjugation(i, j, 1, c, order),
     )
 }
 
 /// Computes the sum score of conjugating the Pauli pair over the qubits `i` and `j`
 /// by chunk `c`.
 #[inline]
-fn compute_sum_score(pset: &PauliSet, i: usize, j: usize, c: usize) -> usize {
-    pset.count_leading_i_conjugation(i, j, 0, c) + pset.count_leading_i_conjugation(i, j, 1, c)
+fn compute_sum_score(pset: &PauliSet, i: usize, j: usize, c: usize, order: &[usize]) -> usize {
+    pset.count_leading_i_conjugation(i, j, 0, c, order) + pset.count_leading_i_conjugation(i, j, 1, c, order)
 }
 
 /// Finds the Clifford circuit corresponding to the best chunk to apply.
 /// The conjugation of the Pauli set by this circuit is done in the main algorithm.
-fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
+fn single_synthesis_step_count(pset: &PauliSet, order: &[usize]) -> CliffordCircuit {
     let mut max_score = -1;
     let mut best_i = 0;
     let mut best_j = 0;
     let mut best_c: usize = 0;
 
-    let support = pset.get_support(0);
+    let support = pset.get_support(order[0]);
     for i in 0..support.len() {
         for j in 0..i {
             for c in 0..18 {
-                let score = compute_max_score(&pset, support[i], support[j], c) as i32;
+                let score = compute_max_score(&pset, support[i], support[j], c, order) as i32;
                 if score > max_score {
                     max_score = score;
                     best_c = c;
@@ -193,7 +193,7 @@ fn single_synthesis_step_count(pset: &PauliSet) -> CliffordCircuit {
     )
 }
 
-fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
+fn build_graph(bucket: &PauliSet, order: &[usize]) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
     let mut best_chunks: HashMap<(usize, usize), Chunk> = HashMap::new();
     for _ in 0..bucket.n {
@@ -202,11 +202,11 @@ fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), 
     for qbit1 in 0..bucket.n {
         for qbit2 in (qbit1 + 1)..bucket.n {
             // computing the initial identity count
-            let init_count = (bucket.count_leading_i(qbit1) + bucket.count_leading_i(qbit2)) as i32;
+            let init_count = (bucket.count_leading_i(qbit1, order) + bucket.count_leading_i(qbit2, order)) as i32;
             let mut max_score = 0;
             let mut best_chunk: Chunk = [None; 3];
             for c in 0..18 {
-                let score = compute_sum_score(bucket, qbit1, qbit2, c) as i32 - init_count;
+                let score = compute_sum_score(bucket, qbit1, qbit2, c, order) as i32 - init_count;
                 if score > max_score {
                     max_score = score;
                     best_chunk = ALL_CHUNKS[c].clone();
@@ -222,8 +222,8 @@ fn build_graph(bucket: &PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), 
     return (graph, best_chunks);
 }
 
-fn single_synthesis_step_depth(bucket: &PauliSet) -> CliffordCircuit {
-    let (graph, best_chunks) = build_graph(bucket);
+fn single_synthesis_step_depth(bucket: &PauliSet, order: &[usize]) -> CliffordCircuit {
+    let (graph, best_chunks) = build_graph(bucket, order);
     let matching = maximum_matching(&graph);
     let mut circuit_piece = CliffordCircuit::new(bucket.n);
     for (qbit1, qbit2) in matching.edges() {
@@ -239,10 +239,10 @@ fn single_synthesis_step_depth(bucket: &PauliSet) -> CliffordCircuit {
     return circuit_piece;
 }
 
-pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> CliffordCircuit {
+pub fn single_synthesis_step(bucket: &PauliSet, metric: &Metric, order: &[usize]) -> CliffordCircuit {
     return match metric {
-        Metric::COUNT => single_synthesis_step_count(bucket),
-        Metric::DEPTH => single_synthesis_step_depth(bucket),
+        Metric::COUNT => single_synthesis_step_count(bucket, order),
+        Metric::DEPTH => single_synthesis_step_depth(bucket, order),
     };
 }
 
@@ -268,7 +268,8 @@ pub fn pauli_network_synthesis(
         if bucket.len() == 0 {
             break;
         }
-        let circuit_piece = single_synthesis_step(bucket, &metric);
+        let order: Vec<usize> = (0..bucket.len()).collect();
+        let circuit_piece = single_synthesis_step(bucket, &metric, &order);
         output.extend_with(&circuit_piece);
         bucket.conjugate_with_circuit(&circuit_piece);
     }
