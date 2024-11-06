@@ -16,14 +16,14 @@ pub fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
             }
         }
     }
-    return dag;
+    dag
 }
 
 /// Computes the list of operators that can be synthesized
 pub fn get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
     return dag
         .node_indices()
-        .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().len() == 0)
+        .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().is_empty())
         .collect();
 }
 
@@ -99,6 +99,7 @@ impl PauliDag {
                         unprocessed.push(successor);
                     }
                 }
+
             }
         }
     }
@@ -135,5 +136,6 @@ impl PauliDag {
 
         // Updating the front layer
         self.update_front_nodes();
+
     }
 }

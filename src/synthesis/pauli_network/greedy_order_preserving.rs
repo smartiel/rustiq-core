@@ -14,7 +14,6 @@ pub fn pauli_network_synthesis_no_permutation(
     while !dag.fully_processed() {
         dag.single_step_synthesis(&metric, skip_sort, &mut circuit);
     }
-
     circuit
 }
 

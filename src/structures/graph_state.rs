@@ -25,7 +25,7 @@ impl GraphState {
                 gs.adj[j][i] = entry;
             }
         }
-        return gs;
+        gs
     }
     pub fn from_adj(adj: Vec<Vec<bool>>) -> Self {
         let n = adj.len();

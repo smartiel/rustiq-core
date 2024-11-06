@@ -1,14 +1,14 @@
 use crate::structures::{CliffordCircuit, CliffordGate};
 pub type Matrix = Vec<Vec<bool>>;
 
-pub fn xor_vec(a: &mut Vec<bool>, b: &Vec<bool>) {
+pub fn xor_vec(a: &mut [bool], b: &[bool]) {
     for i in 0..a.len() {
         a[i] ^= b[i];
     }
 }
 
 pub fn rowop(table: &mut Matrix, i: usize, j: usize) {
-    if table.len() != 0 {
+    if !table.is_empty() {
         for k in 0..table.first().unwrap().len() {
             table[j][k] ^= table[i][k];
         }
@@ -16,8 +16,8 @@ pub fn rowop(table: &mut Matrix, i: usize, j: usize) {
 }
 
 pub fn colop(table: &mut Matrix, i: usize, j: usize) {
-    for k in 0..table.len() {
-        table[k][j] ^= table[k][i];
+    for row in table.iter_mut() {
+        row[j] ^= row[i];
     }
 }
 
@@ -25,8 +25,8 @@ pub fn row_echelon(table: &mut Matrix, k: usize) {
     let mut rank = 0;
     for i in 0..table.first().unwrap().len() {
         let mut pivot = None;
-        for j in rank..k {
-            if table[j][i] {
+        for (j, row) in table.iter().enumerate().take(k).skip(rank) {
+            if row[i] {
                 pivot = Some(j);
                 break;
             }
@@ -79,8 +79,8 @@ pub fn f2_rank(table: &Matrix) -> usize {
     let ncols = table.first().unwrap().len();
     for i in 0..ncols {
         let mut pivot = None;
-        for j in rank..nrows {
-            if table[j][i] {
+        for (j, row) in table.iter().enumerate().take(nrows).skip(rank) {
+            if row[i] {
                 pivot = Some(j);
                 break;
             }
@@ -105,13 +105,13 @@ pub fn inverse_f2(table: &Matrix) -> Matrix {
     let n = table.len();
     let mut table = table.clone();
     let mut friend = vec![vec![false; n]; n];
-    for i in 0..n {
-        friend[i][i] = true;
+    for (i, row) in friend.iter_mut().enumerate().take(n) {
+        row[i] = true;
     }
     for i in 0..n {
         let mut pivot = None;
-        for j in i..n {
-            if table[j][i] {
+        for (j, row) in table.iter().enumerate().take(n).skip(i) {
+            if row[i] {
                 pivot = Some(j);
                 break;
             }
@@ -127,7 +127,7 @@ pub fn inverse_f2(table: &Matrix) -> Matrix {
             }
         }
     }
-    return friend;
+    friend
 }
 
 pub fn mult_f2(a: &Matrix, b: &Matrix) -> Matrix {
@@ -136,8 +136,8 @@ pub fn mult_f2(a: &Matrix, b: &Matrix) -> Matrix {
     let mut result = vec![vec![false; m]; k];
     for i in 0..k {
         for j in 0..m {
-            for y in 0..l {
-                result[i][j] ^= a[i][y] & b[y][j];
+            for (y, b_row) in b.iter().enumerate().take(l) {
+                result[i][j] ^= a[i][y] & b_row[j];
             }
         }
     }
@@ -148,9 +148,9 @@ pub fn transpose(table: &Matrix) -> Matrix {
     let n = table.len();
     let k = table.first().unwrap().len();
     let mut result = vec![vec![false; n]; k];
-    for i in 0..k {
-        for j in 0..n {
-            result[i][j] = table[j][i];
+    for (i, row) in result.iter_mut().enumerate().take(k) {
+        for (j, table_row) in table.iter().enumerate().take(n) {
+            row[j] = table_row[i];
         }
     }
     result
@@ -162,13 +162,13 @@ pub fn plu_facto(table: &Matrix) -> (Matrix, Matrix, Matrix) {
     let mut u = table.clone();
     let mut l = vec![vec![false; k]; n];
     let mut p = vec![vec![false; n]; n];
-    for i in 0..n {
-        p[i][i] = true;
+    for (i, row) in p.iter_mut().enumerate().take(n) {
+        row[i] = true;
     }
     for i in 0..k {
         let mut pivot = None;
-        for j in i..n {
-            if u[j][i] {
+        for (j, row) in u.iter().enumerate().take(n).skip(i) {
+            if row[i] {
                 pivot = Some(j);
                 break;
             }
@@ -202,10 +202,10 @@ pub fn lu_facto(table: &Matrix) -> (Matrix, Matrix, Matrix, CliffordCircuit) {
         output.gates.push(CliffordGate::CNOT(*b, *a));
     }
     let (p, l, u) = plu_facto(&table);
-    for i in 0..table.len() {
-        assert!(p[i][i]);
+    for (i, row) in p.iter().enumerate().take(table.len()) {
+        assert!(row[i]);
     }
-    return (l, u, c, output);
+    (l, u, c, output)
 }
 
 fn f2_rank_square(matrix: &Matrix) -> usize {
@@ -213,7 +213,7 @@ fn f2_rank_square(matrix: &Matrix) -> usize {
         .iter()
         .map(|v| v.clone().into_iter().take(matrix.len()).collect())
         .collect();
-    return f2_rank(&matrix);
+    f2_rank(&matrix)
 }
 pub fn print_matrix(matrix: &Matrix) {
     for row in matrix.iter() {
@@ -224,7 +224,7 @@ pub fn print_matrix(matrix: &Matrix) {
                 print!("0");
             }
         }
-        println!("");
+        println!();
     }
 }
 /// Finds a sequence of row operations that makes sure that all the leading principal
@@ -233,19 +233,19 @@ pub fn print_matrix(matrix: &Matrix) {
 pub fn non_zero_leading_principal_minors(matrix: &Matrix) -> (Matrix, Vec<(usize, usize)>) {
     let mut piece: Matrix = Vec::new();
     let mut moves = Vec::new();
-    for i in 0..f2_rank(&matrix) {
+    for i in 0..f2_rank(matrix) {
         piece.push(matrix[i].clone());
         let mut current_rk = f2_rank_square(&piece);
         while current_rk == i {
-            for k in i + 1..matrix.len() {
-                xor_vec(&mut piece[i], &matrix[k]);
+            for (k, row) in matrix.iter().enumerate().skip(i + 1) {
+                xor_vec(&mut piece[i], row);
                 let new_rank = f2_rank_square(&piece);
                 if new_rank == i + 1 {
                     moves.push((k, i));
                     current_rk = new_rank;
                     break;
                 } else {
-                    xor_vec(&mut piece[i], &matrix[k]);
+                    xor_vec(&mut piece[i], row);
                 }
             }
             if current_rk == i + 1 {
@@ -254,13 +254,13 @@ pub fn non_zero_leading_principal_minors(matrix: &Matrix) -> (Matrix, Vec<(usize
         }
     }
     let mut c = vec![vec![false; matrix.len()]; matrix.len()];
-    for i in 0..c.len() {
-        c[i][i] = true;
+    for (i, row) in c.iter_mut().enumerate() {
+        row[i] = true;
     }
     for (a, b) in moves.iter() {
         rowop(&mut c, *a, *b);
     }
-    let m = mult_f2(&c, &matrix);
+    let m = mult_f2(&c, matrix);
     for i in 0..piece.len() {
         assert_eq!(piece[i], m[i]);
     }
@@ -276,14 +276,14 @@ pub fn count_ones(matrix: &Matrix) -> usize {
 
 pub fn count_ones_except_diag(matrix: &Matrix) -> usize {
     let mut count = 0;
-    for i in 0..matrix.len() {
-        for j in 0..matrix[i].len() {
-            if i != j && matrix[i][j] {
+    for (i, row) in matrix.iter().enumerate() {
+        for (j, item) in row.iter().enumerate() {
+            if i != j && *item {
                 count += 1;
             }
         }
     }
-    return count;
+    count
 }
 #[cfg(test)]
 mod tests {

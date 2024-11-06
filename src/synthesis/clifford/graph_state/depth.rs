@@ -4,7 +4,7 @@ use crate::structures::pauli_like::PauliLike;
 use petgraph::algo::maximum_matching;
 use petgraph::prelude::*;
 
-fn score_matrix(graph: &mut GraphState, qubits_used: &Vec<bool>) -> Vec<Vec<i32>> {
+fn score_matrix(graph: &mut GraphState, qubits_used: &[bool]) -> Vec<Vec<i32>> {
     let base_value: i32 = graph.count_ones() as i32;
     let mut scores = vec![vec![-1; graph.n]; graph.n];
     for i in 0..graph.n {
@@ -19,7 +19,7 @@ fn score_matrix(graph: &mut GraphState, qubits_used: &Vec<bool>) -> Vec<Vec<i32>
     scores
 }
 
-fn pick_best_operation(scores: &Vec<Vec<i32>>) -> (i32, (usize, usize)) {
+fn pick_best_operation(scores: &[Vec<i32>]) -> (i32, (usize, usize)) {
     let mut best_score = 0;
     let mut best_qubits: (usize, usize) = (0, 0);
     for i in 0..scores.len() {
@@ -30,10 +30,10 @@ fn pick_best_operation(scores: &Vec<Vec<i32>>) -> (i32, (usize, usize)) {
             }
         }
     }
-    return (best_score, best_qubits);
+    (best_score, best_qubits)
 }
 
-pub fn get_czs(graph: &GraphState, qubits_used: &Vec<bool>) -> CliffordCircuit {
+pub fn get_czs(graph: &GraphState, qubits_used: &[bool]) -> CliffordCircuit {
     let mut mgraph: UnGraph<(), i32> = UnGraph::new_undirected();
     for _ in 0..graph.n {
         mgraph.add_node(());
@@ -82,5 +82,5 @@ pub fn synthesize_graph_state_depth(input_graph: &GraphState) -> CliffordCircuit
         graph.conjugate_with_circuit(&cz_circuit);
     }
 
-    return circuit.dagger();
+    circuit.dagger()
 }
