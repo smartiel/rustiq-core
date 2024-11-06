@@ -12,7 +12,7 @@ pub fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
     for i in 0..pauli_set.len() {
         for j in 0..i {
             if !pauli_set.commute(i, j) {
-                dag.add_edge(node_indices[i], node_indices[j], ());
+                dag.add_edge(node_indices[j], node_indices[i], ());
             }
         }
     }
