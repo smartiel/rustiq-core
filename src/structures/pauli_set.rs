@@ -1,5 +1,6 @@
 use super::pauli::Pauli;
 use super::pauli_like::PauliLike;
+use crate::synthesis::pauli_network::chunks::CHUNK_CONJUGATION_SCORE;
 use itertools::izip;
 use std::cmp::max;
 use std::fmt;
@@ -455,6 +456,52 @@ impl PauliSet {
         }
         count
     }
+
+    /// Returns `true` if pauli `col` for qubit `q` is `I`
+    #[inline]
+    pub fn is_i(&self, qbit: usize, col: usize) -> bool {
+        !self.get_entry(qbit, col) && !self.get_entry(qbit + self.n, col)
+    }
+
+    #[inline]
+    pub fn count_leading_i(&self, qbit: usize, order: &[usize]) -> usize {
+        order
+            .iter()
+            .take_while(|&&col| self.is_i(qbit, col))
+            .count()
+    }
+
+    /// Returns (the index of) the Pauli pair over the qubits `i` and `j`
+    /// for the Pauli operator in column `col`.
+    #[inline]
+    pub fn pauli_pair_index(&self, i: usize, j: usize, col: usize) -> usize {
+        let n = self.n;
+        let s0 = self.get_entry(i, col);
+        let d0 = self.get_entry(i + n, col);
+        let s1 = self.get_entry(j, col);
+        let d1 = self.get_entry(j + n, col);
+
+        ((s0 as usize) << 3) | ((d0 as usize) << 2) | ((s1 as usize) << 1) | (d1 as usize)
+    }
+
+    /// Computes the score of conjugating the Pauli pair over the qubits `i` and `j`
+    /// by chunk `c`. This is equivalent to the scoring function described in the
+    /// paper but uses the precomputed table lookup instead of performing conjugation.
+    #[inline]
+    pub fn count_leading_i_conjugation(
+        &self,
+        i: usize,
+        j: usize,
+        q: usize,
+        c: usize,
+        order: &[usize],
+    ) -> usize {
+        order
+            .iter()
+            .take_while(|&&col| CHUNK_CONJUGATION_SCORE[c][q][self.pauli_pair_index(i, j, col)] > 0)
+            .count()
+    }
+
     /// Sorts the set by support size
     pub fn support_size_sort(&mut self) {
         // We first build the "transpose" of data_array (cheaper this way)

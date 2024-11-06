@@ -89,6 +89,7 @@ impl PauliDag {
             if !self.is_synthesized(node_index) {
                 self.front_nodes.push(node_index);
             } else {
+                // println!("Synthesized rotation: {:?}", node_index);
                 // the node can be removed, check which of its successors are now
                 // front nodes
                 for successor in self.dag.neighbors_directed(node_index, Outgoing) {
@@ -113,23 +114,16 @@ impl PauliDag {
         skip_sort: bool,
         synthesized_circuit: &mut CliffordCircuit,
     ) {
-        // Creating a fresh PauliSet from the nodes in the front layer
-        let mut front_layer: PauliSet = PauliSet::new(self.pauli_set.n);
-        for index in &self.front_nodes {
-            let (phase, pstring) = self.pauli_set.get(*self.dag.node_weight(*index).unwrap());
-            front_layer.insert(&pstring, phase);
-        }
-
         if !skip_sort {
-            front_layer.support_size_sort();
+            self.front_nodes
+                .sort_by_cached_key(|k| self.pauli_set.support_size(k.index()));
         }
-
-        let circuit = single_synthesis_step(&mut front_layer, metric);
+        let order: Vec<usize> = self.front_nodes.iter().map(|k| k.index()).collect();
+        let circuit_piece = single_synthesis_step(&self.pauli_set, metric, &order);
 
         // Updating the global set of operators
-        self.pauli_set.conjugate_with_circuit(&circuit);
-
-        synthesized_circuit.extend_with(&circuit);
+        self.pauli_set.conjugate_with_circuit(&circuit_piece);
+        synthesized_circuit.extend_with(&circuit_piece);
 
         // Updating the front layer
         self.update_front_nodes();
