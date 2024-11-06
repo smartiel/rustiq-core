@@ -63,7 +63,7 @@ pub fn chunk_to_circuit(
             _ => {}
         }
     }
-    return circuit_piece;
+    circuit_piece
 }
 
 pub fn conjugate_with_chunk(
@@ -159,7 +159,8 @@ fn compute_max_score(pset: &PauliSet, i: usize, j: usize, c: usize, order: &[usi
 /// by chunk `c`.
 #[inline]
 fn compute_sum_score(pset: &PauliSet, i: usize, j: usize, c: usize, order: &[usize]) -> usize {
-    pset.count_leading_i_conjugation(i, j, 0, c, order) + pset.count_leading_i_conjugation(i, j, 1, c, order)
+    pset.count_leading_i_conjugation(i, j, 0, c, order)
+        + pset.count_leading_i_conjugation(i, j, 1, c, order)
 }
 
 /// Finds the Clifford circuit corresponding to the best chunk to apply.
@@ -174,7 +175,7 @@ fn single_synthesis_step_count(pset: &PauliSet, order: &[usize]) -> CliffordCirc
     for i in 0..support.len() {
         for j in 0..i {
             for c in 0..18 {
-                let score = compute_max_score(&pset, support[i], support[j], c, order) as i32;
+                let score = compute_max_score(pset, support[i], support[j], c, order) as i32;
                 if score > max_score {
                     max_score = score;
                     best_c = c;
@@ -193,7 +194,10 @@ fn single_synthesis_step_count(pset: &PauliSet, order: &[usize]) -> CliffordCirc
     )
 }
 
-fn build_graph(bucket: &PauliSet, order: &[usize]) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
+fn build_graph(
+    bucket: &PauliSet,
+    order: &[usize],
+) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
     let mut best_chunks: HashMap<(usize, usize), Chunk> = HashMap::new();
     for _ in 0..bucket.n {
@@ -202,14 +206,15 @@ fn build_graph(bucket: &PauliSet, order: &[usize]) -> (UnGraph<(), i32>, HashMap
     for qbit1 in 0..bucket.n {
         for qbit2 in (qbit1 + 1)..bucket.n {
             // computing the initial identity count
-            let init_count = (bucket.count_leading_i(qbit1, order) + bucket.count_leading_i(qbit2, order)) as i32;
+            let init_count = (bucket.count_leading_i(qbit1, order)
+                + bucket.count_leading_i(qbit2, order)) as i32;
             let mut max_score = 0;
             let mut best_chunk: Chunk = [None; 3];
-            for c in 0..18 {
+            for (c, _) in ALL_CHUNKS.iter().enumerate() {
                 let score = compute_sum_score(bucket, qbit1, qbit2, c, order) as i32 - init_count;
                 if score > max_score {
                     max_score = score;
-                    best_chunk = ALL_CHUNKS[c].clone();
+                    best_chunk = ALL_CHUNKS[c];
                 }
                 best_chunks.insert((qbit1, qbit2), best_chunk);
             }
@@ -219,7 +224,7 @@ fn build_graph(bucket: &PauliSet, order: &[usize]) -> (UnGraph<(), i32>, HashMap
             }
         }
     }
-    return (graph, best_chunks);
+    (graph, best_chunks)
 }
 
 fn single_synthesis_step_depth(bucket: &PauliSet, order: &[usize]) -> CliffordCircuit {
@@ -236,14 +241,18 @@ fn single_synthesis_step_depth(bucket: &PauliSet, order: &[usize]) -> CliffordCi
         ));
     }
 
-    return circuit_piece;
+    circuit_piece
 }
 
-pub fn single_synthesis_step(bucket: &PauliSet, metric: &Metric, order: &[usize]) -> CliffordCircuit {
-    return match metric {
+pub fn single_synthesis_step(
+    bucket: &PauliSet,
+    metric: &Metric,
+    order: &[usize],
+) -> CliffordCircuit {
+    match metric {
         Metric::COUNT => single_synthesis_step_count(bucket, order),
         Metric::DEPTH => single_synthesis_step_depth(bucket, order),
-    };
+    }
 }
 
 pub fn pauli_network_synthesis(
@@ -251,7 +260,7 @@ pub fn pauli_network_synthesis(
     metric: &Metric,
     skip_sort: bool,
 ) -> CliffordCircuit {
-    if bucket.len() == 0 {
+    if bucket.is_empty() {
         return CliffordCircuit::new(0);
     }
 
@@ -262,18 +271,18 @@ pub fn pauli_network_synthesis(
         if !skip_sort {
             bucket.support_size_sort();
         }
-        while bucket.support_size(0) <= 1 && bucket.len() > 0 {
+        while bucket.support_size(0) <= 1 && !bucket.is_empty() {
             bucket.pop();
         }
-        if bucket.len() == 0 {
+        if bucket.is_empty() {
             break;
         }
         let order: Vec<usize> = (0..bucket.len()).collect();
-        let circuit_piece = single_synthesis_step(bucket, &metric, &order);
+        let circuit_piece = single_synthesis_step(bucket, metric, &order);
         output.extend_with(&circuit_piece);
         bucket.conjugate_with_circuit(&circuit_piece);
     }
-    return output;
+    output
 }
 
 #[cfg(test)]
@@ -320,7 +329,7 @@ mod greedy_synthesis_tests {
         }
         println!("Synthesized {} operators", hit_map.len());
         println!("{:?}", bucket);
-        return hit_map.len() == input.len();
+        hit_map.len() == input.len()
     }
 
     #[test]

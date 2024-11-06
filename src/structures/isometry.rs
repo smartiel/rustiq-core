@@ -63,7 +63,7 @@ impl IsometryTableau {
                 }
             }
         }
-        return iso;
+        iso
     }
     /// Put the full Tableau in column echelon form
     /// Warning: this method scratches the phases
@@ -81,8 +81,8 @@ impl IsometryTableau {
         }
         row_echelon(&mut table, self.k);
         let mut stabs = PauliSet::new(self.n + self.k);
-        for i in 0..self.k {
-            stabs.insert_vec_bool(&table[i], false);
+        for row in table.iter().take(self.k) {
+            stabs.insert_vec_bool(row, false);
         }
         let mut logicals = PauliSet::new(self.n + self.k);
         for i in 0..2 * self.n {
@@ -132,6 +132,6 @@ impl fmt::Display for IsometryTableau {
             "Logicals:\n{}Stabilizers:\n{}",
             self.logicals, self.stabilizers
         )?;
-        return fmt::Result::Ok(());
+        fmt::Result::Ok(())
     }
 }

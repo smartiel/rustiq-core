@@ -16,15 +16,14 @@ pub fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
             }
         }
     }
-    return dag;
+    dag
 }
 
 /// Computes the list of operators that can be synthesized
 pub fn get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
-    return dag
-        .node_indices()
-        .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().len() == 0)
-        .collect();
+    dag.node_indices()
+        .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().is_empty())
+        .collect()
 }
 
 pub struct PauliDag {
@@ -86,8 +85,7 @@ impl PauliDag {
         // let mut unprocessed: Vec<NodeIndex> = Vec::new();
         // std::mem::swap(&mut self.front_nodes, &mut unprocessed);
 
-        while !unprocessed.is_empty() {
-            let node_index = unprocessed.pop().unwrap();
+        while let Some(node_index) = unprocessed.pop() {
             if !self.is_synthesized(node_index) {
                 self.front_nodes.push(node_index);
             } else {
@@ -106,7 +104,7 @@ impl PauliDag {
 
     /// Returns true if fully processed
     pub fn fully_processed(&self) -> bool {
-        self.front_nodes.len() == 0
+        self.front_nodes.is_empty()
     }
 
     /// Performs a single synthesis step
@@ -117,7 +115,8 @@ impl PauliDag {
         synthesized_circuit: &mut CliffordCircuit,
     ) {
         if !skip_sort {
-            self.front_nodes.sort_by_cached_key(|k| self.pauli_set.support_size(k.index()));
+            self.front_nodes
+                .sort_by_cached_key(|k| self.pauli_set.support_size(k.index()));
         }
         let order: Vec<usize> = self.front_nodes.iter().map(|k| k.index()).collect();
         let circuit_piece = single_synthesis_step(&self.pauli_set, metric, &order);

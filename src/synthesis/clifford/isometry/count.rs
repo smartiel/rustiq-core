@@ -13,8 +13,8 @@ enum Type {
 fn gather_parities(circuit: &CliffordCircuit, n: usize, k: usize) -> (Vec<Vec<bool>>, Vec<Type>) {
     let mut graph_state = GraphState::new(n);
     let mut b = vec![vec![false; k]; n];
-    for i in 0..std::cmp::min(n, k) {
-        b[i][i] = true;
+    for (i, item) in b.iter_mut().enumerate().take(std::cmp::min(n, k)) {
+        item[i] = true;
     }
     let mut parities = Vec::new();
     let mut moves = Vec::new();
@@ -32,7 +32,7 @@ fn gather_parities(circuit: &CliffordCircuit, n: usize, k: usize) -> (Vec<Vec<bo
         moves.push(Type::Cnot(0, i));
     }
     for (index, gate) in circuit.gates.iter().enumerate() {
-        graph_state.conjugate_with_gate(&gate);
+        graph_state.conjugate_with_gate(gate);
         match gate {
             CliffordGate::CNOT(i, j) => {
                 rowop(&mut b, *j, *i);
@@ -90,7 +90,7 @@ fn gather_parities(circuit: &CliffordCircuit, n: usize, k: usize) -> (Vec<Vec<bo
         }
     }
 
-    return (parities, moves);
+    (parities, moves)
 }
 
 fn graph_state_and_b_synthesis(
@@ -104,7 +104,7 @@ fn graph_state_and_b_synthesis(
     for i in 0..graph.n {
         if i > 0 {
             let parity_len = i + std::cmp::min(i, k);
-            let (mut parities, moves) = gather_parities(&circuit, i, std::cmp::min(i, k));
+            let (parities, moves) = gather_parities(&circuit, i, std::cmp::min(i, k));
             let mut target = vec![false; parity_len];
             for j in 0..i {
                 target[j] = graph.adj[i][j];
@@ -112,7 +112,7 @@ fn graph_state_and_b_synthesis(
                     target[j + i] = b_matrix[i][j];
                 }
             }
-            let solution = information_set_decoding(&mut parities, &mut target, niter, true);
+            let solution = information_set_decoding(&parities, &target, niter, true);
             let solution = solution.expect("Something went wrong during syndrome decoding :/");
             let mut new_circuit = CliffordCircuit::new(graph.n);
             let moves: Vec<Type> = solution
@@ -143,7 +143,7 @@ fn graph_state_and_b_synthesis(
                 }
             }
             for k in 0..circuit.gates.len() {
-                new_circuit.gates.push(circuit.gates[k].clone());
+                new_circuit.gates.push(circuit.gates[k]);
                 for mov in moves.iter() {
                     match mov {
                         Type::Cnot(gindex, qbit) => {
@@ -181,7 +181,7 @@ fn graph_state_and_b_synthesis(
 }
 
 pub fn isometry_count_synthesis(isometry: &IsometryTableau, niter: usize) -> CliffordCircuit {
-    let (g_k, g_n, b, h_circuit) = decompose(&isometry);
+    let (g_k, g_n, b, h_circuit) = decompose(isometry);
     let (l, u, _, ops) = lu_facto(&transpose(&b));
     let mut output = CliffordCircuit::new(isometry.n + isometry.k);
     let mut gn_as_gs = GraphState::from_adj(g_n);
@@ -211,8 +211,8 @@ mod tests {
         let n = 20;
         let mut graph_adj = GraphState::random(n);
         let mut b_matrix: Matrix = vec![vec![false; n]; n];
-        for i in 0..n {
-            b_matrix[i][i] = true;
+        for (i, row) in b_matrix.iter_mut().enumerate() {
+            row[i] = true;
         }
 
         for _ in 0..n * n {
@@ -224,22 +224,18 @@ mod tests {
         let circuit = graph_state_and_b_synthesis(&graph_adj.adj, &b_matrix, 1);
         graph_adj.conjugate_with_circuit(&circuit);
         for gate in circuit.gates.iter() {
-            match gate {
-                CliffordGate::CNOT(i, j) => rowop(&mut b_matrix, *j, *i),
-                _ => (),
+            if let CliffordGate::CNOT(i, j) = gate {
+                rowop(&mut b_matrix, *j, *i);
             }
         }
-        for i in 0..n {
-            assert_eq!(b_matrix[i][i], true);
-            for l in 0..n {
-                if l != i {
-                    assert_eq!(b_matrix[i][l], false);
-                }
-            }
+        for (i, row) in b_matrix.iter().enumerate() {
+            assert!(row[i]);
+            assert_eq!(row.iter().filter(|b| **b).count(), 1)
         }
+
         for i in 0..n {
             for l in 0..n {
-                assert_eq!(graph_adj.adj[i][l], false);
+                assert!(!graph_adj.adj[i][l]);
             }
         }
     }
@@ -250,8 +246,8 @@ mod tests {
         let k = 5;
         let mut graph_adj = GraphState::random(n + k);
         let mut b_matrix: Matrix = vec![vec![false; n]; n + k];
-        for i in 0..n {
-            b_matrix[i][i] = true;
+        for (i, row) in b_matrix.iter_mut().enumerate().take(n) {
+            row[i] = true;
         }
 
         for _ in 0..(n + k) * (n + k) {
@@ -263,9 +259,8 @@ mod tests {
         let circuit = graph_state_and_b_synthesis(&graph_adj.adj, &b_matrix, 1);
         graph_adj.conjugate_with_circuit(&circuit);
         for gate in circuit.gates.iter() {
-            match gate {
-                CliffordGate::CNOT(i, j) => rowop(&mut b_matrix, *j, *i),
-                _ => (),
+            if let CliffordGate::CNOT(i, j) = gate {
+                rowop(&mut b_matrix, *j, *i);
             }
         }
         println!("=== After de-synthesis ===");
@@ -273,22 +268,19 @@ mod tests {
         print_matrix(&graph_adj.adj);
         println!("B:");
         print_matrix(&b_matrix);
+
+        for (i, row) in b_matrix.iter().enumerate().take(n) {
+            assert!(row[i]);
+            assert_eq!(row.iter().filter(|b| **b).count(), 1)
+        }
+
+        for row in b_matrix.iter().skip(n) {
+            assert_eq!(row.iter().filter(|b| **b).count(), 0)
+        }
+
         for i in 0..n {
-            assert_eq!(b_matrix[i][i], true);
             for l in 0..n {
-                if l != i {
-                    assert_eq!(b_matrix[i][l], false);
-                }
-            }
-        }
-        for i in n..n + k {
-            for l in 0..n {
-                assert_eq!(b_matrix[i][l], false);
-            }
-        }
-        for i in 0..n + k {
-            for l in 0..n + k {
-                assert_eq!(graph_adj.adj[i][l], false);
+                assert!(!graph_adj.adj[i][l]);
             }
         }
     }
@@ -302,7 +294,7 @@ mod tests {
                     print!("0");
                 }
             }
-            println!("");
+            println!("=========");
         }
     }
     #[test]

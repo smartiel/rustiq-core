@@ -17,29 +17,14 @@ pub fn isometry_synthesis(
         Metric::DEPTH => isometry_depth_synthesis(isometry),
     };
     fix_phases(isometry, &mut result);
-    return result;
+    result
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        routines::f2_linalg::Matrix,
-        structures::{PauliLike, Tableau},
-    };
+    use crate::structures::{PauliLike, Tableau};
 
-    fn print_matrix(matrix: &Matrix) {
-        for row in matrix.iter() {
-            for elem in row.iter() {
-                if *elem {
-                    print!("1");
-                } else {
-                    print!("0");
-                }
-            }
-            println!("");
-        }
-    }
     #[test]
     fn test_phases_clifford_count() {
         for _ in 0..10 {

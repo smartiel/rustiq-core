@@ -8,14 +8,8 @@ fn allowed_row_ops(n: usize, k: usize) -> Vec<(usize, usize)> {
     let mut moves = Vec::new();
     for i in 0..n + k {
         for j in 0..n + k {
-            if i != j {
-                if i > j {
-                    moves.push((j, i));
-                } else {
-                    if i >= n {
-                        moves.push((j, i));
-                    }
-                }
+            if i != j && (i > j || i >= n) {
+                moves.push((j, i));
             }
         }
     }
@@ -25,8 +19,8 @@ fn allowed_row_ops(n: usize, k: usize) -> Vec<(usize, usize)> {
 fn score_matrix(
     graph: &mut GraphState,
     b_matrix: &mut Matrix,
-    qubits_used: &Vec<bool>,
-    moves: &Vec<(usize, usize)>,
+    qubits_used: &[bool],
+    moves: &[(usize, usize)],
 ) -> Vec<Vec<i32>> {
     let base_value: i32 = (graph.count_ones() + count_ones_except_diag(b_matrix)) as i32;
     let mut scores = vec![vec![-1; b_matrix.len()]; b_matrix.len()];
@@ -40,13 +34,10 @@ fn score_matrix(
             graph.cnot(*i, *j);
         }
     }
-    return scores;
+    scores
 }
 
-fn pick_best_operation(
-    scores: &Vec<Vec<i32>>,
-    moves: &Vec<(usize, usize)>,
-) -> (i32, (usize, usize)) {
+fn pick_best_operation(scores: &[Vec<i32>], moves: &[(usize, usize)]) -> (i32, (usize, usize)) {
     let mut best_score = 0;
     let mut best_qubits: (usize, usize) = (0, 0);
     for (i, j) in moves.iter() {
@@ -55,7 +46,7 @@ fn pick_best_operation(
             best_qubits = (*j, *i);
         }
     }
-    return (best_score, best_qubits);
+    (best_score, best_qubits)
 }
 fn graph_state_and_b_synthesis(graph: &mut GraphState, b_matrix: &mut Matrix) -> CliffordCircuit {
     let row_ops = allowed_row_ops(
@@ -83,7 +74,7 @@ fn graph_state_and_b_synthesis(graph: &mut GraphState, b_matrix: &mut Matrix) ->
             qubits_used[control] = true;
             qubits_used[target] = true;
         }
-        let cz_circuit = get_czs(&graph, &qubits_used);
+        let cz_circuit = get_czs(graph, &qubits_used);
         output.extend_with(&cz_circuit);
         graph.conjugate_with_circuit(&cz_circuit);
     }
@@ -92,7 +83,7 @@ fn graph_state_and_b_synthesis(graph: &mut GraphState, b_matrix: &mut Matrix) ->
 }
 
 pub fn isometry_depth_synthesis(isometry: &IsometryTableau) -> CliffordCircuit {
-    let (g_k, g_n, b, h_circuit) = decompose(&isometry);
+    let (g_k, g_n, b, h_circuit) = decompose(isometry);
     let (mut l, u, _, ops) = lu_facto(&transpose(&b));
     let mut output = CliffordCircuit::new(isometry.n + isometry.k);
     let mut gn_as_gs = GraphState::from_adj(g_n);
@@ -130,7 +121,7 @@ mod tests {
                     print!("0");
                 }
             }
-            println!("");
+            println!("====");
         }
     }
     #[test]
@@ -140,8 +131,8 @@ mod tests {
         let k = 5;
         let mut graph = GraphState::random(n + k);
         let mut b_matrix: Matrix = vec![vec![false; n]; n + k];
-        for i in 0..n {
-            b_matrix[i][i] = true;
+        for (i, row) in b_matrix.iter_mut().enumerate().take(n) {
+            row[i] = true;
         }
 
         for _ in 0..(n + k) * (n + k) {
@@ -153,9 +144,8 @@ mod tests {
         let circuit = graph_state_and_b_synthesis(&mut graph.clone(), &mut b_matrix.clone());
         graph.conjugate_with_circuit(&circuit);
         for gate in circuit.gates.iter() {
-            match gate {
-                CliffordGate::CNOT(i, j) => rowop(&mut b_matrix, *j, *i),
-                _ => (),
+            if let CliffordGate::CNOT(i, j) = gate {
+                rowop(&mut b_matrix, *j, *i);
             }
         }
         println!("=== After de-synthesis ===");
@@ -163,22 +153,19 @@ mod tests {
         print_matrix(&graph.adj);
         println!("B:");
         print_matrix(&b_matrix);
+
+        for (i, row) in b_matrix.iter().enumerate().take(n) {
+            assert!(row[i]);
+            assert_eq!(row.iter().filter(|b| **b).count(), 1)
+        }
+
+        for row in b_matrix.iter().skip(n) {
+            assert_eq!(row.iter().filter(|b| **b).count(), 0)
+        }
+
         for i in 0..n {
-            assert_eq!(b_matrix[i][i], true);
             for l in 0..n {
-                if l != i {
-                    assert_eq!(b_matrix[i][l], false);
-                }
-            }
-        }
-        for i in n..n + k {
-            for l in 0..n {
-                assert_eq!(b_matrix[i][l], false);
-            }
-        }
-        for i in 0..n + k {
-            for l in 0..n + k {
-                assert_eq!(graph.adj[i][l], false);
+                assert!(!graph.adj[i][l]);
             }
         }
     }

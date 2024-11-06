@@ -11,10 +11,9 @@ enum Type {
     SCnotS,
 }
 
-fn gather_parities(
-    circuit: &CliffordCircuit,
-    n: usize,
-) -> (Vec<Vec<bool>>, Vec<(Type, usize, usize)>) {
+type Parities = (Vec<Vec<bool>>, Vec<(Type, usize, usize)>);
+
+fn gather_parities(circuit: &CliffordCircuit, n: usize) -> Parities {
     let mut graph_state = GraphState::new(n);
     let mut parities = Vec::new();
     let mut moves = Vec::new();
@@ -26,7 +25,7 @@ fn gather_parities(
         moves.push((Type::Cz, 0, i));
     }
     for (index, gate) in circuit.gates.iter().enumerate() {
-        graph_state.conjugate_with_gate(&gate);
+        graph_state.conjugate_with_gate(gate);
         match gate {
             CliffordGate::CNOT(i, j) => {
                 for parity in parities.iter_mut() {
@@ -67,19 +66,17 @@ fn gather_parities(
         }
     }
 
-    return (parities, moves);
+    (parities, moves)
 }
 
 pub fn synthesize_graph_state_count(graph: &GraphState, niter: usize) -> CliffordCircuit {
     let mut circuit = CliffordCircuit::new(graph.n);
     for i in 0..graph.n {
         if i > 0 {
-            let (mut parities, moves) = gather_parities(&circuit, i);
+            let (parities, moves) = gather_parities(&circuit, i);
             let mut target = vec![false; i];
-            for j in 0..i {
-                target[j] = graph.adj[i][j];
-            }
-            let solution = information_set_decoding(&mut parities, &mut target, niter, true);
+            target[..i].copy_from_slice(&graph.adj[i][..i]);
+            let solution = information_set_decoding(&parities, &target, niter, true);
             let solution = solution.expect("Something went wrong during syndrome decoding :/");
             let mut new_circuit = CliffordCircuit::new(graph.n);
             let moves: Vec<(Type, usize, usize)> = solution
@@ -106,7 +103,7 @@ pub fn synthesize_graph_state_count(graph: &GraphState, niter: usize) -> Cliffor
                 }
             }
             for k in 0..circuit.gates.len() {
-                new_circuit.gates.push(circuit.gates[k].clone());
+                new_circuit.gates.push(circuit.gates[k]);
                 for (ty, index, qbit) in moves.iter() {
                     if *index == k + 1 {
                         match ty {

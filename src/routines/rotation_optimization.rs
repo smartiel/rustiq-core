@@ -4,7 +4,7 @@ use crate::structures::pauli_dag::{build_dag_from_pauli_set, get_front_layer, Da
 use crate::structures::{CliffordCircuit, CliffordGate, Parameter, PauliLike, PauliSet, Tableau};
 use std::collections::HashSet;
 
-fn update_rot_pi2<T: PauliLike>(axis: &String, k: i32, rest: &mut T, dagger: bool) {
+fn update_rot_pi2<T: PauliLike>(axis: &str, k: i32, rest: &mut T, dagger: bool) {
     let support: Vec<_> = (0..axis.len())
         .filter(|i| axis.chars().nth(*i).unwrap() != 'I')
         .collect();
@@ -51,7 +51,7 @@ fn update_rot_pi2<T: PauliLike>(axis: &String, k: i32, rest: &mut T, dagger: boo
 }
 
 fn zhang_internal(
-    rotations: &Vec<(String, Parameter)>,
+    rotations: &[(String, Parameter)],
     nqubits: usize,
     inverse_final_clifford: &mut Tableau,
 ) -> Vec<(String, Parameter)> {
@@ -65,7 +65,7 @@ fn zhang_internal(
     let mut rest = PauliSet::from_slice(&axes);
     let mut angles: Vec<Parameter> = Vec::new();
     let mut rot_index = 0;
-    while rest.len() > 0 {
+    while !rest.is_empty() {
         let (phase, axis) = rest.get(0);
         rest.pop();
         let angle = &mut future_angles[rot_index];
@@ -99,11 +99,11 @@ fn zhang_internal(
         rot_index += 1;
     }
     let mut output = Vec::new();
-    for i in 0..bucket.len() {
+    for (i, angle) in angles.iter().enumerate().take(bucket.len()) {
         let (phase, pstring) = bucket.get(i);
         assert!(!phase);
         if pstring.chars().any(|c| c != 'I') {
-            output.push((pstring, angles[i].clone()));
+            output.push((pstring, angle.clone()));
         }
     }
     output
@@ -163,12 +163,9 @@ impl MarkedPauliDag {
     }
 
     fn get_unmarked_xy(&self, rotation_index: usize) -> Option<usize> {
-        for qbit in 0..self.pauli_set.n {
-            if self.pauli_set.get_entry(qbit, rotation_index) & !self.marked.contains(&qbit) {
-                return Some(qbit);
-            }
-        }
-        return None;
+        (0..self.pauli_set.n).find(|&qbit| {
+            self.pauli_set.get_entry(qbit, rotation_index) & !self.marked.contains(&qbit)
+        })
     }
     fn has_unmarked_xy(&self, rotation_index: usize) -> bool {
         for qbit in 0..self.pauli_set.n {
@@ -176,7 +173,7 @@ impl MarkedPauliDag {
                 return true;
             }
         }
-        return false;
+        false
     }
     fn get_rotation_score(&self, rotation_index: usize) -> usize {
         if self.has_unmarked_xy(rotation_index) {
@@ -193,21 +190,20 @@ impl MarkedPauliDag {
                 score += 1;
             }
         }
-        return score;
+        score
     }
     /// Optimize a given rotation from the front layer of the PDAG
     fn optimize_rotation(&mut self, rotation_index: usize) {
         // Remove unmarked Z components:
         for qbit in 0..self.pauli_set.n {
-            if !self.marked.contains(&qbit) {
-                if self
+            if !self.marked.contains(&qbit)
+                && self
                     .pauli_set
                     .get_entry(qbit + self.pauli_set.n, rotation_index)
                     & !self.pauli_set.get_entry(qbit, rotation_index)
-                {
-                    self.pauli_set.set_entry(rotation_index, qbit, false, false);
-                    self.did_something = true;
-                }
+            {
+                self.pauli_set.set_entry(rotation_index, qbit, false, false);
+                self.did_something = true;
             }
         }
         // Fold X components onto a single unmarked qubit (if there is any)
@@ -260,7 +256,7 @@ impl MarkedPauliDag {
             self.output_rotations.push(rotation_index);
         }
         self.dag.retain_nodes(|graph, node_index| {
-            return *graph.node_weight(node_index).unwrap() != rotation_index;
+            *graph.node_weight(node_index).unwrap() != rotation_index
         });
     }
 
@@ -281,13 +277,13 @@ impl MarkedPauliDag {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     fn pop_rest(&mut self) {
         loop {
             let front_layer = self.get_front_indices();
-            if front_layer.len() == 0 {
+            if front_layer.is_empty() {
                 break;
             }
             for rotation_index in front_layer.iter() {
@@ -296,25 +292,25 @@ impl MarkedPauliDag {
                 self.output_rotations.push(*rotation_index);
             }
             self.dag.retain_nodes(|graph, node_index| {
-                return !front_layer.contains(graph.node_weight(node_index).unwrap());
+                !front_layer.contains(graph.node_weight(node_index).unwrap())
             })
         }
     }
 
     pub fn propagate(mut self) -> (PauliSet, Tableau, Vec<usize>, bool) {
-        while (&mut self).simplify_once() {}
+        while self.simplify_once() {}
         self.pop_rest();
-        return (
+        (
             self.output_pauli_set,
             self.final_clifford,
             self.output_rotations,
             self.did_something,
-        );
+        )
     }
 }
 
 pub fn full_initial_state_propagation(
-    rotations: &Vec<(String, Parameter)>,
+    rotations: &[(String, Parameter)],
 ) -> (Vec<(String, Parameter)>, Tableau) {
     let axes: Vec<_> = rotations.iter().map(|e| e.0.clone()).collect();
     let mut angles: Vec<_> = rotations.iter().map(|e| e.1.clone()).collect();
@@ -334,12 +330,12 @@ pub fn full_initial_state_propagation(
         }
     }
     let mut new_rotations = Vec::new();
-    for i in 0..pset.len() {
+    for (i, angle) in angles.iter_mut().enumerate().take(pset.len()) {
         let (phase, string) = pset.get(i);
         if phase {
-            angles[i].flip_sign();
+            angle.flip_sign();
         }
-        new_rotations.push((string, angles[i].clone()));
+        new_rotations.push((string, angle.clone()));
     }
-    return (new_rotations, final_clifford);
+    (new_rotations, final_clifford)
 }

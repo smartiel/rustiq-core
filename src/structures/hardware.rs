@@ -5,8 +5,8 @@ use petgraph::Graph;
 use std::collections::HashMap;
 
 fn convert_shortest_paths(
-    all_paths: &Vec<bellman_ford::Paths<NodeIndex, f64>>,
-    nodes: &Vec<NodeIndex>,
+    all_paths: &[bellman_ford::Paths<NodeIndex, f64>],
+    nodes: &[NodeIndex],
 ) -> Vec<Vec<(usize, Vec<usize>)>> {
     let mut my_paths: Vec<Vec<(usize, Vec<usize>)>> = Vec::new();
     for n1 in nodes.iter() {
@@ -20,7 +20,7 @@ fn convert_shortest_paths(
 }
 
 fn get_shortest_path(
-    all_paths: &Vec<bellman_ford::Paths<NodeIndex, f64>>,
+    all_paths: &[bellman_ford::Paths<NodeIndex, f64>],
     n1: &NodeIndex,
     n2: &NodeIndex,
 ) -> Vec<usize> {
@@ -32,12 +32,12 @@ fn get_shortest_path(
         spath.push(ni.index());
         v = path.predecessors[ni.index()];
     }
-    return spath;
+    spath
 }
 
 fn build_closure_mst(
-    all_paths: &Vec<Vec<(usize, Vec<usize>)>>,
-    terminals: &Vec<usize>,
+    all_paths: &[Vec<(usize, Vec<usize>)>],
+    terminals: &[usize],
 ) -> Graph<(), f64, Undirected> {
     let mut g = Graph::new_undirected();
     let nodes: Vec<_> = (0..terminals.len()).map(|_| g.add_node(())).collect();
@@ -66,12 +66,16 @@ impl SteinerTree {
         self.graph.node_count()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.graph.node_count() == 0
+    }
+
     pub fn cnot_cost(&self) -> usize {
-        return 2 * self.len() - self.terminals.len() - 1;
+        2 * self.len() - self.terminals.len() - 1
     }
 
     pub fn contains(&self, node: usize) -> bool {
-        self.mapping.get(&node).is_some()
+        self.mapping.contains_key(&node)
     }
     pub fn is_leaf(&self, node: usize) -> bool {
         let node_index = self.mapping.get(&node).unwrap();
@@ -85,7 +89,7 @@ impl SteinerTree {
         neighs
     }
     pub fn nodes(&self) -> Vec<usize> {
-        self.mapping.keys().map(|k| *k).collect()
+        self.mapping.keys().copied().collect()
     }
     pub fn add_node(&mut self, node: usize) {
         let node_index = self.graph.add_node(());
@@ -102,8 +106,8 @@ impl SteinerTree {
             panic!("Node {} is not in the tree", node);
         }
         let last_index: NodeIndex<u32> = NodeIndex::new(self.graph.node_count() - 1);
-        let node_index = self.mapping.get(&node).unwrap().clone();
-        let i = self.inverse_mapping.get(&last_index).unwrap().clone();
+        let node_index = *self.mapping.get(&node).unwrap();
+        let i = *self.inverse_mapping.get(&last_index).unwrap();
         if i == node {
             self.graph.remove_node(node_index);
             self.mapping.remove(&i);
@@ -117,8 +121,8 @@ impl SteinerTree {
         self.graph.remove_node(node_index);
     }
 
-    pub fn update_tree(&mut self, new_support: &Vec<usize>, qbits: &[usize; 2]) {
-        self.terminals = new_support.clone();
+    pub fn update_tree(&mut self, new_support: &[usize], qbits: &[usize; 2]) {
+        self.terminals = new_support.to_owned();
         if self.contains(qbits[0]) && self.contains(qbits[1]) {
             if new_support.contains(&qbits[0]) && new_support.contains(&qbits[1]) {
                 return;
@@ -141,9 +145,7 @@ impl SteinerTree {
         if !self.contains(qbits[1]) && new_support.contains(&qbits[1]) {
             self.add_node(qbits[1]);
             self.add_edge(qbits[0], qbits[1]);
-            return;
         }
-        return;
     }
     pub fn prune_non_terminal_leaves(&mut self) {
         loop {
@@ -166,8 +168,8 @@ impl SteinerTree {
 
 fn build_steiner_from_mst(
     closure_mst: &Graph<(), f64, Undirected>,
-    terminals: &Vec<usize>,
-    all_paths: &Vec<Vec<(usize, Vec<usize>)>>,
+    terminals: &[usize],
+    all_paths: &[Vec<(usize, Vec<usize>)>],
 ) -> SteinerTree {
     // Building the extended mst
     let mut g = Graph::new_undirected();
@@ -200,18 +202,15 @@ fn build_steiner_from_mst(
         graph: mst,
         mapping: nodes,
         inverse_mapping: inverse_map,
-        terminals: terminals.clone(),
+        terminals: terminals.to_owned(),
     };
     as_st.prune_non_terminal_leaves();
-    return as_st;
+    as_st
 }
 
-fn get_steiner_tree(
-    conv_paths: &Vec<Vec<(usize, Vec<usize>)>>,
-    terminals: &Vec<usize>,
-) -> SteinerTree {
-    let closure = build_closure_mst(&conv_paths, &terminals);
-    return build_steiner_from_mst(&closure, terminals, &conv_paths);
+fn get_steiner_tree(conv_paths: &[Vec<(usize, Vec<usize>)>], terminals: &[usize]) -> SteinerTree {
+    let closure = build_closure_mst(conv_paths, terminals);
+    build_steiner_from_mst(&closure, terminals, conv_paths)
 }
 #[derive(Debug, Clone)]
 pub struct HardwareGraph {
@@ -220,7 +219,7 @@ pub struct HardwareGraph {
 }
 
 impl HardwareGraph {
-    pub fn from_couplings(couplings: &Vec<(usize, usize)>) -> Self {
+    pub fn from_couplings(couplings: &[(usize, usize)]) -> Self {
         let mut graph = UnGraph::new_undirected();
         let n = couplings.iter().map(|c| c.0.max(c.1)).max().unwrap() + 1;
         let nodes: Vec<_> = (0..n).map(|_| graph.add_node(())).collect();
@@ -236,9 +235,14 @@ impl HardwareGraph {
         }
     }
     pub fn len(&self) -> usize {
-        return self.graph.node_count();
+        self.graph.node_count()
     }
-    pub fn get_steiner_tree(&self, terminals: &Vec<usize>) -> SteinerTree {
+
+    pub fn is_empty(&self) -> bool {
+        self.graph.node_count() == 0
+    }
+
+    pub fn get_steiner_tree(&self, terminals: &[usize]) -> SteinerTree {
         get_steiner_tree(&self.shortest_paths, terminals)
     }
 }

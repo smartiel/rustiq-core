@@ -1,7 +1,7 @@
+//! This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
+
 #[allow(unused_imports)]
 use crate::structures::{CliffordCircuit, Metric, PauliDag, PauliLike, PauliSet};
-/// This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
-
 pub fn pauli_network_synthesis_no_permutation(
     axes: &mut PauliSet,
     metric: &Metric,
@@ -12,9 +12,8 @@ pub fn pauli_network_synthesis_no_permutation(
     let mut dag = PauliDag::from_pauli_set(axes.clone());
     dag.update_front_nodes();
     while !dag.fully_processed() {
-        dag.single_step_synthesis(&metric, skip_sort, &mut circuit);
+        dag.single_step_synthesis(metric, skip_sort, &mut circuit);
     }
-
     circuit
 }
 
@@ -61,7 +60,7 @@ mod greedy_synthesis_tests {
         }
         println!("Synthesized {} operators", hit_map.len());
         println!("{:?}", bucket);
-        return hit_map.len() == input.len();
+        hit_map.len() == input.len()
     }
     #[test]
     fn count_synthesis() {
@@ -73,8 +72,18 @@ mod greedy_synthesis_tests {
     }
     #[test]
     fn count_synthesis_2() {
-        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned(), "XY".to_owned(), "IZ".to_owned(),
-        "XX".to_owned(), "ZZ".to_owned(), "YY".to_owned(), "XY".to_owned(), "IZ".to_owned()];
+        let axes = vec![
+            "XX".to_owned(),
+            "ZZ".to_owned(),
+            "YY".to_owned(),
+            "XY".to_owned(),
+            "IZ".to_owned(),
+            "XX".to_owned(),
+            "ZZ".to_owned(),
+            "YY".to_owned(),
+            "XY".to_owned(),
+            "IZ".to_owned(),
+        ];
         let mut input = PauliSet::from_slice(&axes);
         let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::COUNT, false);
         println!("{circuit:?}");

@@ -4,7 +4,7 @@ use crate::routines::f2_linalg::{f2_rank, rowop};
 use crate::structures::{CliffordCircuit, CliffordGate, PauliSet};
 use std::collections::HashSet;
 
-fn vec_xor(v1: &mut Vec<bool>, v2: &Vec<bool>) {
+fn vec_xor(v1: &mut [bool], v2: &[bool]) {
     for (a, b) in v1.iter_mut().zip(v2.iter()) {
         *a ^= *b;
     }
@@ -13,7 +13,7 @@ fn vec_xor(v1: &mut Vec<bool>, v2: &Vec<bool>) {
 fn greedy_reduce(
     z_table: &mut Vec<Vec<bool>>,
     x_table: &mut Vec<Vec<bool>>,
-    qubits: &Vec<usize>,
+    qubits: &[usize],
 ) -> (usize, CliffordCircuit) {
     let mut min_weight = z_table.len() + 1;
     let mut min_index = None;
@@ -55,10 +55,7 @@ fn greedy_reduce(
     panic!("Something went wrong, no qbit was diagonalized");
 }
 
-fn find_rank_nm1(
-    z_part: &mut Vec<Vec<bool>>,
-    x_part: &mut Vec<Vec<bool>>,
-) -> Option<CliffordCircuit> {
+fn find_rank_nm1(z_part: &mut [Vec<bool>], x_part: &mut Vec<Vec<bool>>) -> Option<CliffordCircuit> {
     // We want to turn x_part into a rank k-1 matrix (or at least attempt to)
     // We are allowed to:
     // * swap row i of Z with row i of X (H gate)
@@ -83,7 +80,7 @@ fn find_rank_nm1(
             }
             down /= 3;
         }
-        let rk = f2_rank(&x_part);
+        let rk = f2_rank(x_part);
         if rk == x_part.len() - 1 {
             return Some(circuit);
         }
@@ -111,7 +108,7 @@ fn find_rank_nm1(
 fn update_rank_nm1(
     z_table: &mut Vec<Vec<bool>>,
     x_table: &mut Vec<Vec<bool>>,
-    subset: &Vec<usize>,
+    subset: &[usize],
 ) -> CliffordCircuit {
     for k in subset.iter() {
         let mut target = x_table[*k].clone();
@@ -138,7 +135,7 @@ fn update_rank_nm1(
 fn subset_codiag(
     z_table: &mut Vec<Vec<bool>>,
     x_table: &mut Vec<Vec<bool>>,
-    subset: &Vec<usize>,
+    subset: &[usize],
 ) -> Option<CliffordCircuit> {
     let mut z_part = Vec::new();
     let mut x_part = Vec::new();
@@ -150,7 +147,7 @@ fn subset_codiag(
     }
     let circuit = find_rank_nm1(&mut z_part, &mut x_part);
     match circuit {
-        None => return None,
+        None => None,
         Some(circuit) => {
             let mut output_circuit = CliffordCircuit::new(z_table.len());
             for gate in circuit.gates.iter() {
@@ -170,14 +167,14 @@ fn subset_codiag(
             }
             let cnot_circuit = update_rank_nm1(z_table, x_table, subset);
             output_circuit.extend_with(&cnot_circuit);
-            return Some(output_circuit);
+            Some(output_circuit)
         }
     }
 }
 
 fn is_qbit_trivial(
-    z_table: &mut Vec<Vec<bool>>,
-    x_table: &mut Vec<Vec<bool>>,
+    z_table: &mut [Vec<bool>],
+    x_table: &mut [Vec<bool>],
     qbit: usize,
 ) -> Option<CliffordCircuit> {
     let observed: HashSet<_> = z_table[qbit]
@@ -202,7 +199,7 @@ fn is_qbit_trivial(
         }
         return Some(CliffordCircuit::new(z_table.len()));
     }
-    return None;
+    None
 }
 
 fn enumerate_subsets(qubits: &HashSet<usize>, size: usize) -> Vec<Vec<usize>> {
@@ -250,14 +247,18 @@ fn step(
             }
         }
     }
-    return greedy_reduce(z_table, x_table, &qubits.iter().map(|e| *e).collect());
+    greedy_reduce(
+        z_table,
+        x_table,
+        &qubits.iter().copied().collect::<Vec<_>>(),
+    )
 }
 
 pub fn codiagonalize_subsetwise(pauli_set: &PauliSet, k: usize) -> CliffordCircuit {
-    let (mut z_table, mut x_table) = build_table(&pauli_set);
+    let (mut z_table, mut x_table) = build_table(pauli_set);
     let mut circuit = CliffordCircuit::new(pauli_set.n);
     let mut qbits: HashSet<usize> = (0..pauli_set.n).collect();
-    while qbits.len() > 0 {
+    while !qbits.is_empty() {
         let (qbit, piece) = step(&mut z_table, &mut x_table, &mut qbits, k);
         assert!(qbits.remove(&qbit));
         circuit.extend_with(&piece);
@@ -280,7 +281,7 @@ mod codiag_subset_tests {
             vec![false, false, false, false, true, true, true, true],
             vec![false, true, false, true, false, true, false, true],
         ];
-        let circuit = subset_codiag(&mut z_table, &mut x_table, &vec![0, 1]);
+        let circuit = subset_codiag(&mut z_table, &mut x_table, &[0, 1]);
         println!("{:?}", circuit);
     }
 
@@ -309,19 +310,16 @@ mod codiag_subset_tests {
                 }
             }
         }
-        let circuit = subset_codiag(&mut z_table, &mut x_table, &vec![0, 1]);
+        let circuit = subset_codiag(&mut z_table, &mut x_table, &[0, 1]);
         assert!(matches!(circuit, Some(..)));
     }
     fn random_instance(n: usize, m: usize) -> PauliSet {
         let mut rng = rand::thread_rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
-            let mut vec: Vec<bool> = Vec::new();
-            for _ in 0..n {
-                vec.push(rng.gen::<bool>());
-            }
-            for _ in 0..n {
-                vec.push(false);
+            let mut vec: Vec<bool> = vec![false; 2 * n];
+            for b in vec.iter_mut().take(n) {
+                *b = rng.gen::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }
@@ -359,9 +357,7 @@ mod codiag_subset_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
@@ -374,9 +370,7 @@ mod codiag_subset_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
