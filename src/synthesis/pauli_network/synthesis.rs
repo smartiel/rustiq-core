@@ -121,7 +121,7 @@ mod tests {
         let nshuffles = 0;
 
         let _result = greedy_pauli_network(
-            &mut operator_sequence,
+            &operator_sequence,
             &metric,
             preserve_order,
             nshuffles,
@@ -143,7 +143,7 @@ mod tests {
         let nshuffles = 0;
 
         let result = greedy_pauli_network(
-            &mut operator_sequence,
+            &operator_sequence,
             &metric,
             preserve_order,
             nshuffles,
@@ -199,7 +199,7 @@ mod tests {
         let nshuffles = 10;
 
         let result = greedy_pauli_network(
-            &mut operator_sequence,
+            &operator_sequence,
             &metric,
             preserve_order,
             nshuffles,
