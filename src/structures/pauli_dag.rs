@@ -86,8 +86,7 @@ impl PauliDag {
         // let mut unprocessed: Vec<NodeIndex> = Vec::new();
         // std::mem::swap(&mut self.front_nodes, &mut unprocessed);
 
-        while !unprocessed.is_empty() {
-            let node_index = unprocessed.pop().unwrap();
+        while let Some(node_index) = unprocessed.pop() {
             if !self.is_synthesized(node_index) {
                 self.front_nodes.push(node_index);
             } else {
@@ -99,14 +98,13 @@ impl PauliDag {
                         unprocessed.push(successor);
                     }
                 }
-
             }
         }
     }
 
     /// Returns true if fully processed
     pub fn fully_processed(&self) -> bool {
-        self.front_nodes.len() == 0
+        self.front_nodes.is_empty()
     }
 
     /// Performs a single synthesis step
@@ -136,6 +134,5 @@ impl PauliDag {
 
         // Updating the front layer
         self.update_front_nodes();
-
     }
 }
