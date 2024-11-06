@@ -338,11 +338,11 @@ impl PauliSet {
 
     /// Checks if two operators in the set commute
     pub fn commute(&self, i: usize, j: usize) -> bool {
-        let (_, vec1) = self.get_as_vec_bool(i);
-        let (_, vec2) = self.get_as_vec_bool(j);
         let mut count_diff = 0;
         for k in 0..self.n {
-            if (vec1[k] & vec2[k + self.n]) ^ (vec1[k + self.n] & vec2[k]) {
+            if (self.get_entry(k, i) & self.get_entry(k + self.n, j))
+                ^ (self.get_entry(k + self.n, i) & self.get_entry(k, j))
+            {
                 count_diff += 1;
             }
         }
