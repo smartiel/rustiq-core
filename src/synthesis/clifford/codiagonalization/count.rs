@@ -103,7 +103,7 @@ mod codiag_count_tests {
         pset.insert("ZZII", false);
         pset.insert("IIXI", false);
         pset.insert("IIIZ", false);
-        codiagonalize_count(&mut pset, 1);
+        codiagonalize_count(&pset, 1);
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod codiag_count_tests {
         pset.insert("XIIXIXX", false);
         pset.insert("IXIXXII", false);
         pset.insert("IIXXIII", false);
-        let circuit = codiagonalize_count(&mut pset, 1);
+        let circuit = codiagonalize_count(&pset, 1);
         println!("{:?}", circuit);
     }
     use rand::Rng;
@@ -120,13 +120,11 @@ mod codiag_count_tests {
         let mut rng = rand::thread_rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
-            let mut vec: Vec<bool> = Vec::new();
-            for _ in 0..n {
-                vec.push(rng.gen::<bool>());
+            let mut vec: Vec<bool> = vec![false; 2 * n];
+            for b in vec.iter_mut().take(n) {
+                *b = rng.gen::<bool>();
             }
-            for _ in 0..n {
-                vec.push(false);
-            }
+
             pset.insert_vec_bool(&vec, false);
         }
         for _ in 0..n * n {
@@ -163,9 +161,7 @@ mod codiag_count_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
@@ -178,9 +174,7 @@ mod codiag_count_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }

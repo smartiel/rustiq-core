@@ -311,7 +311,7 @@ mod greedy_synthesis_tests {
         }
         println!("Synthesized {} operators", hit_map.len());
         println!("{:?}", bucket);
-        return hit_map.len() == input.len();
+        hit_map.len() == input.len()
     }
 
     #[test]

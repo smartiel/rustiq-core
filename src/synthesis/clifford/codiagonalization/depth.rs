@@ -194,12 +194,9 @@ mod codiag_depth_tests {
         let mut rng = rand::thread_rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
-            let mut vec: Vec<bool> = Vec::new();
-            for _ in 0..n {
-                vec.push(rng.gen::<bool>());
-            }
-            for _ in 0..n {
-                vec.push(false);
+            let mut vec: Vec<bool> = vec![false; 2 * n];
+            for b in vec.iter_mut().take(n) {
+                *b = rng.gen::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }
@@ -237,9 +234,7 @@ mod codiag_depth_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
@@ -252,9 +247,7 @@ mod codiag_depth_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
@@ -268,9 +261,7 @@ mod codiag_depth_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }

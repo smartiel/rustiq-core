@@ -256,7 +256,7 @@ impl MarkedPauliDag {
             self.output_rotations.push(rotation_index);
         }
         self.dag.retain_nodes(|graph, node_index| {
-            return *graph.node_weight(node_index).unwrap() != rotation_index;
+            *graph.node_weight(node_index).unwrap() != rotation_index
         });
     }
 
@@ -292,7 +292,7 @@ impl MarkedPauliDag {
                 self.output_rotations.push(*rotation_index);
             }
             self.dag.retain_nodes(|graph, node_index| {
-                return !front_layer.contains(graph.node_weight(node_index).unwrap());
+                !front_layer.contains(graph.node_weight(node_index).unwrap())
             })
         }
     }

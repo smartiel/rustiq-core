@@ -211,8 +211,8 @@ mod tests {
         let n = 20;
         let mut graph_adj = GraphState::random(n);
         let mut b_matrix: Matrix = vec![vec![false; n]; n];
-        for i in 0..n {
-            b_matrix[i][i] = true;
+        for (i, row) in b_matrix.iter_mut().enumerate() {
+            row[i] = true;
         }
 
         for _ in 0..n * n {
@@ -224,22 +224,18 @@ mod tests {
         let circuit = graph_state_and_b_synthesis(&graph_adj.adj, &b_matrix, 1);
         graph_adj.conjugate_with_circuit(&circuit);
         for gate in circuit.gates.iter() {
-            match gate {
-                CliffordGate::CNOT(i, j) => rowop(&mut b_matrix, *j, *i),
-                _ => (),
+            if let CliffordGate::CNOT(i, j) = gate {
+                rowop(&mut b_matrix, *j, *i);
             }
         }
-        for i in 0..n {
-            assert_eq!(b_matrix[i][i], true);
-            for l in 0..n {
-                if l != i {
-                    assert_eq!(b_matrix[i][l], false);
-                }
-            }
+        for (i, row) in b_matrix.iter().enumerate() {
+            assert!(row[i]);
+            assert_eq!(row.iter().filter(|b| **b).count(), 1)
         }
+
         for i in 0..n {
             for l in 0..n {
-                assert_eq!(graph_adj.adj[i][l], false);
+                assert!(!graph_adj.adj[i][l]);
             }
         }
     }
@@ -250,8 +246,8 @@ mod tests {
         let k = 5;
         let mut graph_adj = GraphState::random(n + k);
         let mut b_matrix: Matrix = vec![vec![false; n]; n + k];
-        for i in 0..n {
-            b_matrix[i][i] = true;
+        for (i, row) in b_matrix.iter_mut().enumerate().take(n) {
+            row[i] = true;
         }
 
         for _ in 0..(n + k) * (n + k) {
@@ -263,9 +259,8 @@ mod tests {
         let circuit = graph_state_and_b_synthesis(&graph_adj.adj, &b_matrix, 1);
         graph_adj.conjugate_with_circuit(&circuit);
         for gate in circuit.gates.iter() {
-            match gate {
-                CliffordGate::CNOT(i, j) => rowop(&mut b_matrix, *j, *i),
-                _ => (),
+            if let CliffordGate::CNOT(i, j) = gate {
+                rowop(&mut b_matrix, *j, *i);
             }
         }
         println!("=== After de-synthesis ===");
@@ -273,22 +268,19 @@ mod tests {
         print_matrix(&graph_adj.adj);
         println!("B:");
         print_matrix(&b_matrix);
+
+        for (i, row) in b_matrix.iter().enumerate().take(n) {
+            assert!(row[i]);
+            assert_eq!(row.iter().filter(|b| **b).count(), 1)
+        }
+
+        for row in b_matrix.iter().skip(n) {
+            assert_eq!(row.iter().filter(|b| **b).count(), 0)
+        }
+
         for i in 0..n {
-            assert_eq!(b_matrix[i][i], true);
             for l in 0..n {
-                if l != i {
-                    assert_eq!(b_matrix[i][l], false);
-                }
-            }
-        }
-        for i in n..n + k {
-            for l in 0..n {
-                assert_eq!(b_matrix[i][l], false);
-            }
-        }
-        for i in 0..n + k {
-            for l in 0..n + k {
-                assert_eq!(graph_adj.adj[i][l], false);
+                assert!(!graph_adj.adj[i][l]);
             }
         }
     }
@@ -302,7 +294,7 @@ mod tests {
                     print!("0");
                 }
             }
-            println!("");
+            println!("=========");
         }
     }
     #[test]

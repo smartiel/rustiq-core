@@ -537,7 +537,7 @@ mod pauli_set_tests {
     #[test]
     fn insertion() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYZI", false);
+        pset.insert("XYZI", false);
         assert_eq!(pset.data_array.len(), 8);
         assert_eq!(pset.n, 4);
         assert_eq!(pset.nstrides, 1);
@@ -556,17 +556,17 @@ mod pauli_set_tests {
     #[test]
     fn get() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYZI", false);
+        pset.insert("XYZI", false);
         assert_eq!(pset.get(0), (false, "XYZI".to_owned()));
     }
 
     #[test]
     fn h_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"X", false);
-        pset.insert(&"Z", false);
-        pset.insert(&"Y", false);
-        pset.insert(&"I", false);
+        pset.insert("X", false);
+        pset.insert("Z", false);
+        pset.insert("Y", false);
+        pset.insert("I", false);
 
         pset.h(0);
 
@@ -579,10 +579,10 @@ mod pauli_set_tests {
     #[test]
     fn s_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"X", false);
-        pset.insert(&"Z", false);
-        pset.insert(&"Y", false);
-        pset.insert(&"I", false);
+        pset.insert("X", false);
+        pset.insert("Z", false);
+        pset.insert("Y", false);
+        pset.insert("I", false);
 
         pset.s(0);
 
@@ -595,10 +595,10 @@ mod pauli_set_tests {
     #[test]
     fn sqrt_x_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"X", false);
-        pset.insert(&"Z", false);
-        pset.insert(&"Y", false);
-        pset.insert(&"I", false);
+        pset.insert("X", false);
+        pset.insert("Z", false);
+        pset.insert("Y", false);
+        pset.insert("I", false);
 
         pset.sqrt_x(0);
 
@@ -643,10 +643,10 @@ mod pauli_set_tests {
     #[test]
     fn support_size_test() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYIZ", false);
-        pset.insert(&"XYII", false);
-        pset.insert(&"IYIZ", false);
-        pset.insert(&"IIII", false);
+        pset.insert("XYIZ", false);
+        pset.insert("XYII", false);
+        pset.insert("IYIZ", false);
+        pset.insert("IIII", false);
         assert_eq!(pset.support_size(0), 3);
         assert_eq!(pset.support_size(1), 2);
         assert_eq!(pset.support_size(2), 2);
@@ -655,11 +655,11 @@ mod pauli_set_tests {
     #[test]
     fn count_id() {
         let mut pset = PauliSet::new(5);
-        pset.insert(&"IIIII", false);
-        pset.insert(&"XIIII", false);
-        pset.insert(&"XXIII", false);
-        pset.insert(&"XXXII", false);
-        pset.insert(&"XXXXI", false);
+        pset.insert("IIIII", false);
+        pset.insert("XIIII", false);
+        pset.insert("XXIII", false);
+        pset.insert("XXXII", false);
+        pset.insert("XXXXI", false);
         for i in 0..5 {
             assert_eq!(pset.count_id(i), i + 1);
         }
@@ -667,11 +667,11 @@ mod pauli_set_tests {
     #[test]
     fn sort_test() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"IIII", false);
-        pset.insert(&"XXII", false);
-        pset.insert(&"XXXX", false);
-        pset.insert(&"XIII", false);
-        pset.insert(&"XXXI", false);
+        pset.insert("IIII", false);
+        pset.insert("XXII", false);
+        pset.insert("XXXX", false);
+        pset.insert("XIII", false);
+        pset.insert("XXXI", false);
         pset.support_size_sort();
         assert_eq!(pset.get(0), (false, "IIII".to_owned()));
         assert_eq!(pset.get(1), (false, "XIII".to_owned()));
@@ -682,8 +682,8 @@ mod pauli_set_tests {
     #[test]
     fn pop_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"I", false);
-        pset.insert(&"X", false);
+        pset.insert("I", false);
+        pset.insert("X", false);
         assert_eq!(pset.noperators, 2);
         pset.pop();
         assert_eq!(pset.noperators, 1);
@@ -693,11 +693,11 @@ mod pauli_set_tests {
     #[test]
     fn commute_test() {
         let mut pset = PauliSet::new(2);
-        pset.insert(&"ZI", false);
-        pset.insert(&"XI", false);
-        pset.insert(&"ZZ", false);
-        pset.insert(&"XX", false);
-        pset.insert(&"YY", false);
+        pset.insert("ZI", false);
+        pset.insert("XI", false);
+        pset.insert("ZZ", false);
+        pset.insert("XX", false);
+        pset.insert("YY", false);
         assert!(pset.commute(0, 2));
         assert!(!pset.commute(0, 1));
         assert!(pset.commute(2, 3));

@@ -117,7 +117,7 @@ mod tests {
                 }
             }
         }
-        return true;
+        true
     }
     #[test]
     fn test_decompose() {

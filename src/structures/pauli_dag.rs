@@ -20,10 +20,9 @@ pub fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
 
 /// Computes the list of operators that can be synthesized
 pub fn get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
-    return dag
-        .node_indices()
+    dag.node_indices()
         .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().is_empty())
-        .collect();
+        .collect()
 }
 
 pub struct PauliDag {
