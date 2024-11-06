@@ -1,7 +1,7 @@
+//! This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
+
 #[allow(unused_imports)]
 use crate::structures::{CliffordCircuit, Metric, PauliDag, PauliLike, PauliSet};
-/// This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
-
 pub fn pauli_network_synthesis_no_permutation(
     axes: &mut PauliSet,
     metric: &Metric,
@@ -60,7 +60,7 @@ mod greedy_synthesis_tests {
         }
         println!("Synthesized {} operators", hit_map.len());
         println!("{:?}", bucket);
-        return hit_map.len() == input.len();
+        hit_map.len() == input.len()
     }
     #[test]
     fn count_synthesis() {

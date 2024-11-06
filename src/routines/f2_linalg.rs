@@ -190,7 +190,7 @@ pub fn plu_facto(table: &Matrix) -> (Matrix, Matrix, Matrix) {
         }
     }
 
-    return (p, l, u.drain(..k).collect());
+    (p, l, u.drain(..k).collect())
 }
 
 pub fn lu_facto(table: &Matrix) -> (Matrix, Matrix, Matrix, CliffordCircuit) {
@@ -294,8 +294,8 @@ mod tests {
         assert!(m <= n);
         let mut rng = rand::thread_rng();
         let mut matrix = vec![vec![false; m]; n];
-        for i in 0..m {
-            matrix[i][i] = true;
+        for (i, row) in matrix.iter_mut().take(m).enumerate() {
+            row[i] = true;
         }
         for _ in 0..n * n {
             let i = rng.gen_range(0..n);
@@ -328,16 +328,17 @@ mod tests {
             perm.sort();
             assert_eq!(perm, (0..n).collect::<Vec<_>>());
 
-            for i in 0..l.len() {
-                for j in i + 1..l[i].len() {
-                    assert!(!l[i][j], "L should be lower triangular");
+            for (i, row) in l.iter().enumerate() {
+                if i < row.len() - 1 {
+                    assert!(
+                        row[i + 1..].iter().all(|&v| !v),
+                        "L should be lower triangular"
+                    );
                 }
             }
 
-            for i in 0..u.len() {
-                for j in 0..std::cmp::min(u[i].len(), i) {
-                    assert!(!u[i][j], "U should be upper triangular");
-                }
+            for (i, row) in u.iter().enumerate() {
+                assert!(row[..i].iter().all(|&v| !v), "U should be lower triangular");
             }
 
             // Check if PA = LU
@@ -355,16 +356,17 @@ mod tests {
             let matrix = random_skinny(n, m);
             let (l, u, c, _) = lu_facto(&matrix);
 
-            for i in 0..l.len() {
-                for j in i + 1..l[i].len() {
-                    assert!(!l[i][j], "L should be lower triangular");
+            for (i, row) in l.iter().enumerate() {
+                if i < row.len() - 1 {
+                    assert!(
+                        row[i + 1..].iter().all(|&v| !v),
+                        "L should be lower triangular"
+                    );
                 }
             }
 
-            for i in 0..u.len() {
-                for j in 0..std::cmp::min(u[i].len(), i) {
-                    assert!(!u[i][j], "U should be upper triangular");
-                }
+            for (i, row) in u.iter().enumerate() {
+                assert!(row[..i].iter().all(|&v| !v), "U should be lower triangular");
             }
             let lu = mult_f2(&l, &u);
             let clu = mult_f2(&inverse_f2(&c), &lu);
@@ -375,8 +377,8 @@ mod tests {
     fn random_invertible(n: usize) -> Matrix {
         let mut rng = rand::thread_rng();
         let mut matrix = vec![vec![false; n]; n];
-        for i in 0..n {
-            matrix[i][i] = true;
+        for (i, row) in matrix.iter_mut().enumerate() {
+            row[i] = true;
         }
         for _ in 0..n * n {
             let i = rng.gen_range(0..n);

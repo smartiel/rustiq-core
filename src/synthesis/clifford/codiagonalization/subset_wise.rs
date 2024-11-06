@@ -281,7 +281,7 @@ mod codiag_subset_tests {
             vec![false, false, false, false, true, true, true, true],
             vec![false, true, false, true, false, true, false, true],
         ];
-        let circuit = subset_codiag(&mut z_table, &mut x_table, &vec![0, 1]);
+        let circuit = subset_codiag(&mut z_table, &mut x_table, &[0, 1]);
         println!("{:?}", circuit);
     }
 
@@ -310,19 +310,16 @@ mod codiag_subset_tests {
                 }
             }
         }
-        let circuit = subset_codiag(&mut z_table, &mut x_table, &vec![0, 1]);
+        let circuit = subset_codiag(&mut z_table, &mut x_table, &[0, 1]);
         assert!(matches!(circuit, Some(..)));
     }
     fn random_instance(n: usize, m: usize) -> PauliSet {
         let mut rng = rand::thread_rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
-            let mut vec: Vec<bool> = Vec::new();
-            for _ in 0..n {
-                vec.push(rng.gen::<bool>());
-            }
-            for _ in 0..n {
-                vec.push(false);
+            let mut vec: Vec<bool> = vec![false; 2 * n];
+            for b in vec.iter_mut().take(n) {
+                *b = rng.gen::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }
@@ -360,9 +357,7 @@ mod codiag_subset_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }
@@ -375,9 +370,7 @@ mod codiag_subset_tests {
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
-                for j in 0..instance.n {
-                    assert!(!vec[j]);
-                }
+                assert!(vec[..instance.n].iter().all(|b| !*b));
             }
         }
     }

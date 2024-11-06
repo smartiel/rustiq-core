@@ -98,7 +98,7 @@ mod common_codiag_tests {
         pset.insert("ZZII", false);
         pset.insert("IIXI", false);
         pset.insert("IIIZ", false);
-        let (c, m, _, _) = make_full_rank(&mut pset);
+        let (c, m, _, _) = make_full_rank(&pset);
         println!("{:?}", m);
         println!("{:?}", c);
     }
@@ -124,12 +124,9 @@ mod common_codiag_tests {
         let mut rng = rand::thread_rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
-            let mut vec: Vec<bool> = Vec::new();
-            for _ in 0..n {
-                vec.push(rng.gen::<bool>());
-            }
-            for _ in 0..n {
-                vec.push(false);
+            let mut vec: Vec<bool> = vec![false; 2 * n];
+            for b in vec.iter_mut().take(n) {
+                *b = rng.gen::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }

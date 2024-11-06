@@ -147,27 +147,27 @@ mod decoding_tests {
     use super::*;
     #[test]
     fn test_raw_decoding() {
-        let mut parities = vec![
+        let parities = vec![
             vec![true, false, false],
             vec![false, true, false],
             vec![false, false, true],
             vec![true, false, true],
         ];
-        let mut target = vec![true, true, true];
-        let solution = syndrome_decoding(&mut parities, &mut target);
+        let target = vec![true, true, true];
+        let solution = syndrome_decoding(&parities, &target);
         println!("{:?}", solution);
         assert_eq!(solution, Some(vec![false, true, false, true]));
     }
     #[test]
     fn test_isd() {
-        let mut parities = vec![
+        let parities = vec![
             vec![true, false, false],
             vec![false, true, false],
             vec![false, false, true],
             vec![true, false, true],
         ];
-        let mut target = vec![true, true, true];
-        let solution = information_set_decoding(&mut parities, &mut target, 100, true);
+        let target = vec![true, true, true];
+        let solution = information_set_decoding(&parities, &target, 100, true);
         println!("{:?}", solution);
     }
 }

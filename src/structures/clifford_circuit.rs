@@ -113,19 +113,17 @@ impl CliffordCircuit {
     }
     /// Counts the number of CNOT gates
     pub fn cnot_count(&self) -> usize {
-        return self
-            .gates
+        self.gates
             .iter()
             .filter(|gate| matches!(gate, CliffordGate::CNOT(_, _)))
-            .count();
+            .count()
     }
     /// Counts the number of CNOT gates
     pub fn entangling_count(&self) -> usize {
-        return self
-            .gates
+        self.gates
             .iter()
             .filter(|gate| matches!(gate, CliffordGate::CNOT(_, _) | CliffordGate::CZ(_, _)))
-            .count();
+            .count()
     }
     /// Computes the CNOT depth of the circuit
     pub fn cnot_depth(&self) -> usize {
@@ -137,7 +135,7 @@ impl CliffordCircuit {
                 depths[*j] = gate_depth;
             }
         }
-        return *depths.iter().max().unwrap();
+        *depths.iter().max().unwrap()
     }
     /// Computes the CNOT depth of the circuit
     pub fn entangling_depth(&self) -> usize {
@@ -157,7 +155,7 @@ impl CliffordCircuit {
                 _ => {}
             }
         }
-        return *depths.iter().max().unwrap();
+        *depths.iter().max().unwrap()
     }
     /// Returns the inverse of the circuit
     pub fn dagger(&self) -> Self {
