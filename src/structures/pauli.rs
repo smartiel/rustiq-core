@@ -1,36 +1,70 @@
 use super::pauli_like::PauliLike;
 use std::ops;
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Pauli {
     pub n: usize,
-    pub data: Vec<bool>,
+    pub x_paulis: Vec<u64>,
+    pub z_paulis: Vec<u64>,
     pub phase: u8,
 }
 
 impl Pauli {
     pub fn new(n: usize) -> Self {
+        let nr_blocks = n.div_ceil(64);
         Pauli {
             n,
-            data: vec![true; 2 * n],
+            x_paulis: vec![0; nr_blocks],
+            z_paulis: vec![0; nr_blocks],
             phase: 0,
         }
     }
     pub fn from_vec_bool(data: Vec<bool>, phase: u8) -> Self {
-        Pauli {
-            n: data.len() / 2,
-            data,
-            phase,
-        }
+        let n = data.len() / 2;
+        let mut me = Pauli::new(n);
+        me.phase = phase;
+
+        let (x_bools, z_bools) = data.split_at(n);
+        me.x_paulis = x_bools
+            .chunks(64)
+            .map(|chunk| {
+                let mut sum = 0;
+                // Encode in LSB
+                for b in chunk.iter().rev() {
+                    sum = (sum << 1) | (*b as u64);
+                }
+                sum
+            })
+            .collect();
+
+        me.z_paulis = z_bools
+            .chunks(64)
+            .map(|chunk| {
+                let mut sum = 0;
+                // Encode in LSB
+                for b in chunk.iter().rev() {
+                    sum = (sum << 1) | (*b as u64);
+                }
+                sum
+            })
+            .collect();
+
+        me
     }
     pub fn commutes(&self, other: &Pauli) -> bool {
         if self.n != other.n {
             panic!("Can't compare two Paulis on different number of qubits");
         }
-        let (my_z, my_x) = self.data.split_at(self.n);
-        let (their_z, their_x) = other.data.split_at(self.n);
-        let p1 = my_z.iter().zip(their_x.iter()).map(|(a, b)| a & b);
-        let p2 = my_x.iter().zip(their_z.iter()).map(|(a, b)| a & b);
-        (p1.zip(p2).map(|(a, b)| a ^ b).filter(|a| *a).count() & 1) == 0
+
+        let self_xz = self.x_paulis.iter().chain(self.z_paulis.iter());
+        let other_zx = other.z_paulis.iter().chain(other.x_paulis.iter());
+        let added = self_xz
+            .zip(other_zx)
+            .map(|(x1, z2)| x1 & z2)
+            // This is equivalent to x.count_ones() + y.count_ones() % 2
+            .reduce(|x, y| x ^ y)
+            .unwrap_or(0);
+        added.count_ones() % 2 == 0
     }
 }
 
@@ -41,45 +75,77 @@ impl ops::Mul<Pauli> for Pauli {
         assert_eq!(self.n, _rhs.n);
         let mut output = Pauli::new(self.n);
         output.phase = self.phase + _rhs.phase;
-        for i in 0..self.n {
-            if self.data[i] && _rhs.data[i + self.n] {
-                output.phase += 2;
-            }
-            if self.data[i + self.n] && _rhs.data[i] {
-                output.phase += 2;
-            }
-        }
-        for i in 0..2 * self.n {
-            output.data[i] = self.data[i] ^ _rhs.data[i];
-        }
+
+        // X^x Z^z X^x' Z^z' = (-1)^(zx') X^(x+x') Z^(z+z')
+        // Compute whether a -1 sign is applied
+        let commute_phase = self
+            .z_paulis
+            .iter()
+            .zip(_rhs.x_paulis.iter())
+            .map(|(z1, x2)| z1 & x2)
+            .reduce(|x, y| x ^ y)
+            .unwrap_or(0)
+            .count_ones()
+            % 2;
+        output.phase += (2 * commute_phase) as u8;
+
+        output.x_paulis = self
+            .x_paulis
+            .iter()
+            .zip(_rhs.x_paulis.iter())
+            .map(|(x1, x2)| x1 ^ x2)
+            .collect();
+
+        output.z_paulis = self
+            .z_paulis
+            .iter()
+            .zip(_rhs.z_paulis.iter())
+            .map(|(x1, x2)| x1 ^ x2)
+            .collect();
         output.phase %= 4;
         output
     }
 }
 
-impl PauliLike for Pauli {
-    fn h(&mut self, i: usize) {
-        self.data.swap(i, i + self.n);
-    }
+// TODO
+// impl PauliLike for Pauli {
+//     fn h(&mut self, i: usize) {
+//         self.data.swap(i, i + self.n);
+//     }
 
-    fn s(&mut self, i: usize) {
-        self.data[i + self.n] ^= self.data[i];
-    }
+//     fn s(&mut self, i: usize) {
+//         self.data[i + self.n] ^= self.data[i];
+//     }
 
-    fn sd(&mut self, i: usize) {
-        self.data[i + self.n] ^= self.data[i];
-    }
+//     fn sd(&mut self, i: usize) {
+//         self.data[i + self.n] ^= self.data[i];
+//     }
 
-    fn sqrt_x(&mut self, i: usize) {
-        self.data[i] ^= self.data[i + self.n];
-    }
+//     fn sqrt_x(&mut self, i: usize) {
+//         self.data[i] ^= self.data[i + self.n];
+//     }
 
-    fn sqrt_xd(&mut self, i: usize) {
-        self.data[i] ^= self.data[i + self.n];
-    }
+//     fn sqrt_xd(&mut self, i: usize) {
+//         self.data[i] ^= self.data[i + self.n];
+//     }
 
-    fn cnot(&mut self, i: usize, j: usize) {
-        self.data[i + self.n] ^= self.data[j + self.n];
-        self.data[j] ^= self.data[i];
+//     fn cnot(&mut self, i: usize, j: usize) {
+//         self.data[i + self.n] ^= self.data[j + self.n];
+//         self.data[j] ^= self.data[i];
+//     }
+// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_bool_vec() {
+        let mut x = Pauli::new(2);
+        x.x_paulis[0] = 3;
+        let vector = vec![true, true, false, false];
+        let p = Pauli::from_vec_bool(vector, 0);
+
+        assert_eq!(x, p)
     }
 }
