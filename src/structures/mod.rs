@@ -4,6 +4,7 @@ pub mod clifford_circuit;
 pub mod graph_state;
 pub mod hardware;
 pub mod isometry;
+pub mod measurement_like;
 pub mod metric;
 pub mod parameter;
 pub mod pauli;
