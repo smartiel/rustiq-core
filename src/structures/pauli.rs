@@ -1,7 +1,7 @@
 use super::pauli_like::PauliLike;
 use std::ops;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Pauli {
     pub n: usize,
     pub x_paulis: Vec<u64>,
@@ -66,22 +66,37 @@ impl Pauli {
             .unwrap_or(0);
         added.count_ones() % 2 == 0
     }
+
+    pub fn x_bit(&self, idx: usize) -> bool {
+        self.x_paulis[Pauli::stride(idx)] >> Pauli::offset(idx) & 1 != 0
+    }
+
+    pub fn z_bit(&self, idx: usize) -> bool {
+        self.z_paulis[Pauli::stride(idx)] >> Pauli::offset(idx) & 1 != 0
+    }
+
+    fn stride(index: usize) -> usize {
+        index / 64
+    }
+    fn offset(index: usize) -> usize {
+        index % 64
+    }
 }
 
 impl ops::Mul<Pauli> for Pauli {
     type Output = Pauli;
 
-    fn mul(self, _rhs: Pauli) -> Pauli {
-        assert_eq!(self.n, _rhs.n);
+    fn mul(self, rhs: Pauli) -> Pauli {
+        assert_eq!(self.n, rhs.n);
         let mut output = Pauli::new(self.n);
-        output.phase = self.phase + _rhs.phase;
+        output.phase = self.phase + rhs.phase;
 
         // X^x Z^z X^x' Z^z' = (-1)^(zx') X^(x+x') Z^(z+z')
         // Compute whether a -1 sign is applied
         let commute_phase = self
             .z_paulis
             .iter()
-            .zip(_rhs.x_paulis.iter())
+            .zip(rhs.x_paulis.iter())
             .map(|(z1, x2)| z1 & x2)
             .reduce(|x, y| x ^ y)
             .unwrap_or(0)
@@ -92,14 +107,14 @@ impl ops::Mul<Pauli> for Pauli {
         output.x_paulis = self
             .x_paulis
             .iter()
-            .zip(_rhs.x_paulis.iter())
+            .zip(rhs.x_paulis.iter())
             .map(|(x1, x2)| x1 ^ x2)
             .collect();
 
         output.z_paulis = self
             .z_paulis
             .iter()
-            .zip(_rhs.z_paulis.iter())
+            .zip(rhs.z_paulis.iter())
             .map(|(x1, x2)| x1 ^ x2)
             .collect();
         output.phase %= 4;
@@ -147,5 +162,16 @@ mod tests {
         let p = Pauli::from_vec_bool(vector, 0);
 
         assert_eq!(x, p)
+    }
+
+    #[test]
+    fn test_get_bits() {
+        let mut x = Pauli::new(2);
+        x.x_paulis[0] = 3;
+        x.z_paulis[0] = 1;
+        assert!(x.x_bit(0));
+        assert!(x.x_bit(1));
+        assert!(x.z_bit(0));
+        assert!(!x.z_bit(1));
     }
 }
