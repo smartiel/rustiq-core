@@ -129,24 +129,23 @@ impl PauliSet {
         self.noperators - 1
     }
 
-    // pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
-    //     self.insert_vec_bool(&pauli.data, pauli.phase == 2)
-    // }
+    pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
+        assert_eq!(self.n, pauli.n);
+        let mut vec = Vec::<bool>::with_capacity(2 * self.n);
+        for i in 0..self.n {
+            vec.push(pauli.x_bit(i));
+        }
+        for i in 0..self.n {
+            vec.push(pauli.z_bit(i));
+        }
+        self.insert_vec_bool(&vec, pauli.sign)
+    }
 
     // Multiply a Pauli in the table by another Pauli
     pub fn mul_pauli(&mut self, operator_index: usize, pauli: &Pauli) {
         let self_p = self.get_as_pauli(operator_index);
         let new_p = &self_p * pauli;
-
-        for qubit in 0..self.n {
-            self.set_entry(
-                operator_index,
-                qubit,
-                new_p.x_bit(qubit),
-                new_p.z_bit(qubit),
-            );
-            self.set_phase(qubit, new_p.phase != 0)
-        }
+        self.set_pauli(operator_index, &new_p);
     }
 
     pub fn set_phase(&mut self, col: usize, phase: bool) {
@@ -162,6 +161,19 @@ impl PauliSet {
         let offset = get_offset(operator_index + self.start_offset);
         set_bit(&mut self.data_array[qbit][stride], offset, x_part);
         set_bit(&mut self.data_array[qbit + self.n][stride], offset, z_part);
+    }
+
+    // Set a column in the PauliSet to the give pauli
+    pub fn set_pauli(&mut self, operator_index: usize, pauli: &Pauli) {
+        for qubit in 0..self.n {
+            self.set_entry(
+                operator_index,
+                qubit,
+                pauli.x_bit(qubit),
+                pauli.z_bit(qubit),
+            );
+            self.set_phase(qubit, pauli.sign)
+        }
     }
 
     pub fn set_raw_entry(&mut self, row: usize, col: usize, value: bool) {
@@ -252,7 +264,7 @@ impl PauliSet {
     /// Get the operator at index `operator_index` as a `Pauli` object
     pub fn get_as_pauli(&self, operator_index: usize) -> Pauli {
         let (phase, data) = self.get_as_vec_bool(operator_index);
-        Pauli::from_vec_bool(data, if phase { 2 } else { 0 })
+        (data.as_slice(), phase).into()
     }
 
     /// Get a single entry of the PauliSet

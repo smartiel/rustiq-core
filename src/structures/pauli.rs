@@ -1,12 +1,12 @@
 use super::pauli_like::PauliLike;
 use std::ops;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Pauli {
     pub n: usize,
     pub x_paulis: Vec<u64>,
     pub z_paulis: Vec<u64>,
-    pub phase: u8,
+    pub sign: bool,
 }
 
 impl Pauli {
@@ -16,41 +16,10 @@ impl Pauli {
             n,
             x_paulis: vec![0; nr_blocks],
             z_paulis: vec![0; nr_blocks],
-            phase: 0,
+            sign: false,
         }
     }
-    pub fn from_vec_bool(data: Vec<bool>, phase: u8) -> Self {
-        let n = data.len() / 2;
-        let mut me = Pauli::new(n);
-        me.phase = phase;
 
-        let (x_bools, z_bools) = data.split_at(n);
-        me.x_paulis = x_bools
-            .chunks(64)
-            .map(|chunk| {
-                let mut sum = 0;
-                // Encode in LSB
-                for b in chunk.iter().rev() {
-                    sum = (sum << 1) | (*b as u64);
-                }
-                sum
-            })
-            .collect();
-
-        me.z_paulis = z_bools
-            .chunks(64)
-            .map(|chunk| {
-                let mut sum = 0;
-                // Encode in LSB
-                for b in chunk.iter().rev() {
-                    sum = (sum << 1) | (*b as u64);
-                }
-                sum
-            })
-            .collect();
-
-        me
-    }
     pub fn commutes(&self, other: &Pauli) -> bool {
         if self.n != other.n {
             panic!("Can't compare two Paulis on different number of qubits");
@@ -89,7 +58,7 @@ impl ops::Mul<&Pauli> for &Pauli {
     fn mul(self, rhs: &Pauli) -> Self::Output {
         assert_eq!(self.n, rhs.n);
         let mut output = Pauli::new(self.n);
-        output.phase = self.phase + rhs.phase;
+        output.sign = self.sign ^ rhs.sign;
 
         // X^x Z^z X^x' Z^z' = (-1)^(zx') X^(x+x') Z^(z+z')
         // Compute whether a -1 sign is applied
@@ -102,7 +71,7 @@ impl ops::Mul<&Pauli> for &Pauli {
             .unwrap_or(0)
             .count_ones()
             % 2;
-        output.phase += (2 * commute_phase) as u8;
+        output.sign ^= commute_phase != 0;
 
         output.x_paulis = self
             .x_paulis
@@ -117,8 +86,42 @@ impl ops::Mul<&Pauli> for &Pauli {
             .zip(rhs.z_paulis.iter())
             .map(|(x1, x2)| x1 ^ x2)
             .collect();
-        output.phase %= 4;
         output
+    }
+}
+
+impl From<(&[bool], bool)> for Pauli {
+    fn from((data, sign): (&[bool], bool)) -> Self {
+        let n = data.len() / 2;
+        let mut me = Pauli::new(n);
+        me.sign = sign;
+
+        let (x_bools, z_bools) = data.split_at(n);
+        me.x_paulis = x_bools
+            .chunks(64)
+            .map(|chunk| {
+                let mut sum = 0;
+                // Encode in LSB
+                for b in chunk.iter().rev() {
+                    sum = (sum << 1) | (*b as u64);
+                }
+                sum
+            })
+            .collect();
+
+        me.z_paulis = z_bools
+            .chunks(64)
+            .map(|chunk| {
+                let mut sum = 0;
+                // Encode in LSB
+                for b in chunk.iter().rev() {
+                    sum = (sum << 1) | (*b as u64);
+                }
+                sum
+            })
+            .collect();
+
+        me
     }
 }
 
@@ -159,7 +162,7 @@ mod tests {
         let mut x = Pauli::new(2);
         x.x_paulis[0] = 3;
         let vector = vec![true, true, false, false];
-        let p = Pauli::from_vec_bool(vector, 0);
+        let p = Pauli::from((vector.as_slice(), false));
 
         assert_eq!(x, p)
     }
