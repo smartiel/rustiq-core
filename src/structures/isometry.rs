@@ -1,6 +1,8 @@
-use super::pauli_like::PauliLike;
+use super::measurement_like::MeasurementLike;
 use super::pauli_set::PauliSet;
+use super::{pauli_like::PauliLike, Pauli};
 use crate::routines::f2_linalg::{row_echelon, Matrix};
+use itertools::Itertools;
 use rand::Rng;
 use std::fmt;
 
@@ -122,6 +124,32 @@ impl PauliLike for IsometryTableau {
     fn cnot(&mut self, i: usize, j: usize) {
         self.logicals.cnot(i, j);
         self.stabilizers.cnot(i, j);
+    }
+}
+
+impl MeasurementLike for IsometryTableau {
+    fn measure(&mut self, meas_string: Pauli) {
+        // Find an anti-commuting stabilizer, if there isn't, you measured data!
+        // Todo: generalize to allow measurements of data
+        let (corr_i, _) = (0..self.stabilizers.len())
+            .find_position(|i| !self.stabilizers.get_as_pauli(*i).commutes(&meas_string))
+            .unwrap();
+
+        let correction = self.stabilizers.get_as_pauli(corr_i);
+        for j in corr_i + 1..self.stabilizers.len() {
+            let other = self.stabilizers.get_as_pauli(j);
+            if !other.commutes(&meas_string) {
+                self.stabilizers.mul_pauli(j, &correction);
+            }
+        }
+
+        // Now correct logicals
+        for j in 0..self.logicals.len() {
+            let other = self.logicals.get_as_pauli(j);
+            if !other.commutes(&meas_string) {
+                self.logicals.mul_pauli(j, &correction);
+            }
+        }
     }
 }
 

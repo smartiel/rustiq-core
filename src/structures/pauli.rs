@@ -83,10 +83,10 @@ impl Pauli {
     }
 }
 
-impl ops::Mul<Pauli> for Pauli {
+impl ops::Mul<&Pauli> for &Pauli {
     type Output = Pauli;
 
-    fn mul(self, rhs: Pauli) -> Pauli {
+    fn mul(self, rhs: &Pauli) -> Self::Output {
         assert_eq!(self.n, rhs.n);
         let mut output = Pauli::new(self.n);
         output.phase = self.phase + rhs.phase;

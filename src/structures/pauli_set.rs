@@ -134,9 +134,9 @@ impl PauliSet {
     // }
 
     // Multiply a Pauli in the table by another Pauli
-    pub fn mul_pauli(&mut self, operator_index: usize, pauli: Pauli) {
+    pub fn mul_pauli(&mut self, operator_index: usize, pauli: &Pauli) {
         let self_p = self.get_as_pauli(operator_index);
-        let new_p = self_p * pauli;
+        let new_p = &self_p * pauli;
 
         for qubit in 0..self.n {
             self.set_entry(
