@@ -160,20 +160,14 @@ impl PauliSet {
     pub fn set_entry(&mut self, operator_index: usize, qbit: usize, x_part: bool, z_part: bool) {
         let stride = get_stride(operator_index + self.start_offset);
         let offset = get_offset(operator_index + self.start_offset);
-        if x_part != (1 == (self.data_array[qbit][stride] >> offset) & 1) {
-            self.data_array[qbit][stride] ^= 1 << offset;
-        }
-        if z_part != (1 == (self.data_array[qbit + self.n][stride] >> offset) & 1) {
-            self.data_array[qbit + self.n][stride] ^= 1 << offset;
-        }
+        set_bit(&mut self.data_array[qbit][stride], offset, x_part);
+        set_bit(&mut self.data_array[qbit + self.n][stride], offset, z_part);
     }
 
     pub fn set_raw_entry(&mut self, row: usize, col: usize, value: bool) {
         let stride = get_stride(col);
         let offset = get_offset(col);
-        if value != (1 == (self.data_array[row][stride] >> offset) & 1) {
-            self.data_array[row][stride] ^= 1 << offset;
-        }
+        set_bit(&mut self.data_array[row][stride], offset, value);
     }
 
     /// Clears the data of the Pauli set
