@@ -25,6 +25,12 @@ pub fn extract_rotations(
                 clifford.s(qbits[0]);
                 clifford.s(qbits[0])
             }
+            "Y" => {
+                clifford.sqrt_x(qbits[0]);
+                clifford.s(qbits[0]);
+                clifford.s(qbits[0]);
+                clifford.sqrt_xd(qbits[0]);
+            }
             "RZ" => {
                 rotations.push(clifford.get_inverse_z(qbits[0]));
             }
