@@ -129,7 +129,7 @@ impl PauliSet {
     pub fn set_phase(&mut self, col: usize, phase: bool) {
         let stride = get_stride(col);
         let offset = get_offset(col);
-        if phase != ((self.phases[stride] >> offset & 1) != 0) {
+        if phase != (((self.phases[stride] >> offset) & 1) != 0) {
             self.phases[stride] ^= 1 << offset;
         }
     }
