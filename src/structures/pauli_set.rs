@@ -15,6 +15,11 @@ fn get_offset(index: usize) -> usize {
     index % WIDTH
 }
 
+#[inline]
+fn set_bit(bit_string: &mut u64, i: usize, bit: bool) {
+    *bit_string = (*bit_string) & !(1 << i) | ((bit as u64) << i);
+}
+
 /// A set of Pauli operators (module global phase)
 /// Conjugation by Clifford gates are vectorized
 #[derive(Clone, Debug, PartialEq)]
@@ -123,33 +128,58 @@ impl PauliSet {
         self.noperators += 1;
         self.noperators - 1
     }
+
     pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
-        self.insert_vec_bool(&pauli.data, pauli.phase == 2)
+        assert_eq!(self.n, pauli.n);
+        let mut vec = Vec::<bool>::with_capacity(2 * self.n);
+        for i in 0..self.n {
+            vec.push(pauli.x_bit(i));
+        }
+        for i in 0..self.n {
+            vec.push(pauli.z_bit(i));
+        }
+        self.insert_vec_bool(&vec, pauli.sign)
     }
+
+    // Multiply a Pauli in the table by another Pauli
+    pub fn mul_pauli(&mut self, operator_index: usize, pauli: &Pauli) {
+        let self_p = self.get_as_pauli(operator_index);
+        let new_p = &self_p * pauli;
+        self.set_pauli(operator_index, &new_p);
+    }
+
     pub fn set_phase(&mut self, col: usize, phase: bool) {
         let stride = get_stride(col);
         let offset = get_offset(col);
-        if phase != ((self.phases[stride] >> offset & 1) != 0) {
-            self.phases[stride] ^= 1 << offset;
-        }
+
+        // Set phase bit equal to phase
+        set_bit(&mut self.phases[stride], offset, phase);
     }
 
     pub fn set_entry(&mut self, operator_index: usize, qbit: usize, x_part: bool, z_part: bool) {
         let stride = get_stride(operator_index + self.start_offset);
         let offset = get_offset(operator_index + self.start_offset);
-        if x_part != (1 == (self.data_array[qbit][stride] >> offset) & 1) {
-            self.data_array[qbit][stride] ^= 1 << offset;
-        }
-        if z_part != (1 == (self.data_array[qbit + self.n][stride] >> offset) & 1) {
-            self.data_array[qbit + self.n][stride] ^= 1 << offset;
+        set_bit(&mut self.data_array[qbit][stride], offset, x_part);
+        set_bit(&mut self.data_array[qbit + self.n][stride], offset, z_part);
+    }
+
+    // Set a column in the PauliSet to the give pauli
+    pub fn set_pauli(&mut self, operator_index: usize, pauli: &Pauli) {
+        for qubit in 0..self.n {
+            self.set_entry(
+                operator_index,
+                qubit,
+                pauli.x_bit(qubit),
+                pauli.z_bit(qubit),
+            );
+            self.set_phase(qubit, pauli.sign)
         }
     }
+
     pub fn set_raw_entry(&mut self, row: usize, col: usize, value: bool) {
         let stride = get_stride(col);
         let offset = get_offset(col);
-        if value != (1 == (self.data_array[row][stride] >> offset) & 1) {
-            self.data_array[row][stride] ^= 1 << offset;
-        }
+        set_bit(&mut self.data_array[row][stride], offset, value);
     }
 
     /// Clears the data of the Pauli set
@@ -234,8 +264,9 @@ impl PauliSet {
     /// Get the operator at index `operator_index` as a `Pauli` object
     pub fn get_as_pauli(&self, operator_index: usize) -> Pauli {
         let (phase, data) = self.get_as_vec_bool(operator_index);
-        Pauli::from_vec_bool(data, if phase { 2 } else { 0 })
+        (data.as_slice(), phase).into()
     }
+
     /// Get a single entry of the PauliSet
     pub fn get_entry(&self, row: usize, col: usize) -> bool {
         let col = col + self.start_offset;
@@ -243,6 +274,7 @@ impl PauliSet {
         let offset = get_offset(col);
         ((self.data_array[row][stride] >> offset) & 1) != 0
     }
+
     pub fn get_phase(&self, col: usize) -> bool {
         let col = col + self.start_offset;
         let stride = get_stride(col);
