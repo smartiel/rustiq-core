@@ -11,4 +11,4 @@ homepage = "https://github.com/smartiel/rustiq-core"
 [dependencies]
 petgraph = "0.6.3"
 itertools = "0.10.5"
-rand = "0.8.5"
+rand = "0.9.1"

@@ -292,14 +292,14 @@ mod tests {
 
     fn random_skinny(n: usize, m: usize) -> Matrix {
         assert!(m <= n);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut matrix = vec![vec![false; m]; n];
         for (i, row) in matrix.iter_mut().take(m).enumerate() {
             row[i] = true;
         }
         for _ in 0..n * n {
-            let i = rng.gen_range(0..n);
-            let j = rng.gen_range(0..n);
+            let i = rng.random_range(0..n);
+            let j = rng.random_range(0..n);
             if i != j {
                 rowop(&mut matrix, i, j);
             }
@@ -375,14 +375,14 @@ mod tests {
     }
 
     fn random_invertible(n: usize) -> Matrix {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut matrix = vec![vec![false; n]; n];
         for (i, row) in matrix.iter_mut().enumerate() {
             row[i] = true;
         }
         for _ in 0..n * n {
-            let i = rng.gen_range(0..n);
-            let j = rng.gen_range(0..n);
+            let i = rng.random_range(0..n);
+            let j = rng.random_range(0..n);
             if i != j {
                 rowop(&mut matrix, i, j);
             }

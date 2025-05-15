@@ -191,22 +191,22 @@ mod codiag_depth_tests {
 
     use rand::Rng;
     fn random_instance(n: usize, m: usize) -> PauliSet {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
             let mut vec: Vec<bool> = vec![false; 2 * n];
             for b in vec.iter_mut().take(n) {
-                *b = rng.gen::<bool>();
+                *b = rng.random::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }
         for _ in 0..n * n {
-            let i = rng.gen::<usize>() % n;
+            let i = rng.random::<u64>() as usize % n;
             loop {
-                let j = rng.gen::<usize>() % n;
+                let j = rng.random::<u64>() as usize % n;
                 if j != i {
                     pset.cnot(i, j);
-                    let g2 = rng.gen::<bool>();
+                    let g2 = rng.random::<bool>();
                     if g2 {
                         pset.h(j);
                     } else {
@@ -215,7 +215,7 @@ mod codiag_depth_tests {
                     break;
                 }
             }
-            let g1 = rng.gen::<bool>();
+            let g1 = rng.random::<bool>();
             if g1 {
                 pset.h(i);
             } else {

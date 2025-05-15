@@ -63,12 +63,12 @@ impl Tableau {
     }
     /// Generates a random Tableau (no garantuees, just here for testing)
     pub fn random(n: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut iso = Self::new(n);
         for _ in 0..(n) * (n) {
-            let i = rng.gen::<usize>() % (n);
+            let i = rng.random::<u64>() as usize % (n);
             loop {
-                let j = rng.gen::<usize>() % (n);
+                let j = rng.random::<u64>() as usize % (n);
                 if i == j {
                     continue;
                 }
@@ -76,13 +76,13 @@ impl Tableau {
                 break;
             }
             for _ in 0..(n) {
-                let gate_i = rng.gen::<u8>() % 3;
+                let gate_i = rng.random::<u8>() % 3;
                 if gate_i == 1 {
-                    let q = rng.gen::<usize>() % (n);
+                    let q = rng.random::<u64>() as usize % (n);
                     iso.h(q);
                 }
                 if gate_i == 2 {
-                    let q = rng.gen::<usize>() % (n);
+                    let q = rng.random::<u64>() as usize % (n);
                     iso.s(q);
                 }
             }

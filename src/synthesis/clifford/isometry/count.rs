@@ -207,7 +207,7 @@ mod tests {
     use rand::Rng;
     #[test]
     fn test_graph_state_and_b_synthesis() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let n = 20;
         let mut graph_adj = GraphState::random(n);
         let mut b_matrix: Matrix = vec![vec![false; n]; n];
@@ -216,8 +216,8 @@ mod tests {
         }
 
         for _ in 0..n * n {
-            let i = rng.gen::<usize>() % (n - 1);
-            let j = rng.gen::<usize>() % (n - i - 1) + i + 1;
+            let i = rng.random::<u64>() as usize % (n - 1);
+            let j = rng.random::<u64>() as usize % (n - i - 1) + i + 1;
             assert!(j > i);
             rowop(&mut b_matrix, i, j);
         }
@@ -241,7 +241,7 @@ mod tests {
     }
     #[test]
     fn test_graph_state_and_b_synthesis_rectangular() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let n = 20;
         let k = 5;
         let mut graph_adj = GraphState::random(n + k);
@@ -251,8 +251,8 @@ mod tests {
         }
 
         for _ in 0..(n + k) * (n + k) {
-            let i = rng.gen::<usize>() % (n + k - 1);
-            let j = rng.gen::<usize>() % (n + k - i - 1) + i + 1;
+            let i = rng.random::<u64>() as usize % (n + k - 1);
+            let j = rng.random::<u64>() as usize % (n + k - i - 1) + i + 1;
             assert!(j > i);
             rowop(&mut b_matrix, i, j);
         }

@@ -16,11 +16,11 @@ impl GraphState {
         }
     }
     pub fn random(n: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut gs = Self::new(n);
         for i in 0..n {
             for j in i..n {
-                let entry = rng.gen::<bool>();
+                let entry = rng.random::<bool>();
                 gs.adj[i][j] = entry;
                 gs.adj[j][i] = entry;
             }

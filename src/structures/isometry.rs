@@ -39,12 +39,12 @@ impl IsometryTableau {
         }
     }
     pub fn random(n: usize, k: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut iso = Self::new(n, k);
         for _ in 0..(n + k) * (n + k) {
-            let i = rng.gen::<usize>() % (n + k);
+            let i = rng.random::<u64>() as usize % (n + k);
             loop {
-                let j = rng.gen::<usize>() % (n + k);
+                let j = rng.random::<u64>() as usize % (n + k);
                 if i == j {
                     continue;
                 }
@@ -52,13 +52,13 @@ impl IsometryTableau {
                 break;
             }
             for _ in 0..(n + k) {
-                let gate_i = rng.gen::<u8>() % 3;
+                let gate_i = rng.random::<u8>() % 3;
                 if gate_i == 1 {
-                    let q = rng.gen::<usize>() % (n + k);
+                    let q = rng.random::<u64>() as usize % (n + k);
                     iso.h(q);
                 }
                 if gate_i == 2 {
-                    let q = rng.gen::<usize>() % (n + k);
+                    let q = rng.random::<u64>() as usize % (n + k);
                     iso.s(q);
                 }
             }

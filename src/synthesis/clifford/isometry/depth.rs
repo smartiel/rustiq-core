@@ -126,7 +126,7 @@ mod tests {
     }
     #[test]
     fn test_graph_state_and_b_synthesis_rectangular() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let n = 5;
         let k = 5;
         let mut graph = GraphState::random(n + k);
@@ -136,8 +136,8 @@ mod tests {
         }
 
         for _ in 0..(n + k) * (n + k) {
-            let i = rng.gen::<usize>() % (n + k - 1);
-            let j = rng.gen::<usize>() % (n + k - i - 1) + i + 1;
+            let i = rng.random::<u64>() as usize % (n + k - 1);
+            let j = rng.random::<u64>() as usize % (n + k - i - 1) + i + 1;
             assert!(j > i);
             rowop(&mut b_matrix, i, j);
         }

@@ -6,18 +6,18 @@ use crate::structures::{
     CliffordCircuit, CliffordGate, IsometryTableau, Metric, PauliLike, PauliSet,
 };
 use crate::synthesis::clifford::isometry::isometry_synthesis;
-use rand::thread_rng;
+use rand::rng;
 use rand::Rng;
 
 fn permute_input(pset: &mut PauliSet) -> Vec<usize> {
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut permutation = (0..pset.n).collect::<Vec<usize>>();
     if pset.n <= 1 {
         return permutation;
     }
     for _ in 0..pset.n * pset.n {
-        let i = rng.gen_range(0..pset.n - 1);
-        let j = rng.gen_range(i + 1..pset.n);
+        let i = rng.random_range(0..pset.n - 1);
+        let j = rng.random_range(i + 1..pset.n);
         permutation.swap(i, j);
         pset.swap_qbits(i, j);
     }

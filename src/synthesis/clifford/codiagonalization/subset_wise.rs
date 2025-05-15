@@ -288,7 +288,7 @@ mod codiag_subset_tests {
     use rand::Rng;
     #[test]
     fn test_paper_ex_random_lc() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut x_table = vec![
             vec![false, false, true, true, true, true, false, false],
             vec![false, false, true, true, true, true, false, false],
@@ -299,7 +299,7 @@ mod codiag_subset_tests {
         ];
         for _ in 0..8 {
             for i in 0..2 {
-                let pick = rng.gen::<u8>() % 3;
+                let pick = rng.random::<u8>() % 3;
                 if pick == 1 {
                     for l in 0..8 {
                         x_table[i][l] ^= z_table[i][l];
@@ -314,22 +314,22 @@ mod codiag_subset_tests {
         assert!(matches!(circuit, Some(..)));
     }
     fn random_instance(n: usize, m: usize) -> PauliSet {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut pset = PauliSet::new(n);
         for _ in 0..m {
             let mut vec: Vec<bool> = vec![false; 2 * n];
             for b in vec.iter_mut().take(n) {
-                *b = rng.gen::<bool>();
+                *b = rng.random::<bool>();
             }
             pset.insert_vec_bool(&vec, false);
         }
         for _ in 0..n * n {
-            let i = rng.gen::<usize>() % n;
+            let i = rng.random::<u64>() as usize % n;
             loop {
-                let j = rng.gen::<usize>() % n;
+                let j = rng.random::<u64>() as usize % n;
                 if j != i {
                     pset.cnot(i, j);
-                    let g2 = rng.gen::<bool>();
+                    let g2 = rng.random::<bool>();
                     if g2 {
                         pset.h(j);
                     } else {
@@ -338,7 +338,7 @@ mod codiag_subset_tests {
                     break;
                 }
             }
-            let g1 = rng.gen::<bool>();
+            let g1 = rng.random::<bool>();
             if g1 {
                 pset.h(i);
             } else {
