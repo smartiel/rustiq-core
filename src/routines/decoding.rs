@@ -1,5 +1,5 @@
+use rand::rng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 pub fn syndrome_decoding(parities: &[Vec<bool>], input_target: &Vec<bool>) -> Option<Vec<bool>> {
     let mut target = input_target.clone();
@@ -56,7 +56,7 @@ fn shuffle_parities(
 ) -> Vec<usize> {
     let n = parities.first().unwrap().len();
     let mut row_permutation: Vec<usize> = (0..parities.len()).collect();
-    row_permutation.shuffle(&mut thread_rng());
+    row_permutation.shuffle(&mut rng());
     let mut new_parities = Vec::new();
     for j in row_permutation.iter() {
         new_parities.push(parities[*j].clone());

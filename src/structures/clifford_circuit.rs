@@ -83,26 +83,26 @@ impl CliffordCircuit {
     }
 
     pub fn random(nqubits: usize, ngates: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut circuit = Self::new(nqubits);
         for _ in 0..ngates {
-            if rng.gen_bool(0.5) {
+            if rng.random_bool(0.5) {
                 // CNOT
-                let i = rng.gen_range(0..nqubits);
-                let mut j = rng.gen_range(0..nqubits);
+                let i = rng.random_range(0..nqubits);
+                let mut j = rng.random_range(0..nqubits);
                 while j == i {
-                    j = rng.gen_range(0..nqubits);
+                    j = rng.random_range(0..nqubits);
                 }
                 circuit.gates.push(CliffordGate::CNOT(i, j));
                 continue;
             }
-            if rng.gen_bool(0.5) {
+            if rng.random_bool(0.5) {
                 // H
-                let i = rng.gen_range(0..nqubits);
+                let i = rng.random_range(0..nqubits);
                 circuit.gates.push(CliffordGate::H(i));
                 continue;
             }
-            let i = rng.gen_range(0..nqubits);
+            let i = rng.random_range(0..nqubits);
             circuit.gates.push(CliffordGate::S(i));
         }
         circuit
